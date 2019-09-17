@@ -71,4 +71,30 @@ void FrontierBasedExploration3D::findFrontiers() {
   ROS_DEBUG_STREAM("find_frontier used total " << total_time << " sec");
 }
 
+void FrontierBasedExploration3D::findClusters()
+{
+  clusterCenters.clear();
+  for (auto& f : frontiers) {
+    int c_size = 0;
+    auto center = Eigen::Vector3i(f.first.k[0], f.first.k[1], f.first.k[2]);
+    auto nn = f.second;
+    frontiers.erase(f.first);
+    neighborRecursion(f.second, center, c_size); // one cluster is finished
+    center /= c_size; // find the cluster center
+    clusterCenters.push_back(OcTreeKey(center[0], center[1], center[2]));
+  }
+}
+
+void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors, Eigen::Vector3i& center, int& c_size) {
+  for (auto& n : neighbors) { // all neighbors of f
+    if (frontiers.find(n) == frontiers.end()) { // if neighbor is also a frontier
+      center += Eigen::Vector3i(n.k[0], n.k[1], n.k[2]);
+      c_size++;
+      auto nn = frontiers[n]; // get second neighbors
+      frontiers.erase(n); // remove from frontier
+      neighborRecursion(nn, center, c_size); // do it again
+    }
+  }
+}
+
 }

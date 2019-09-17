@@ -38,11 +38,14 @@ private:
 	typedef std::map<OcTreeKey, vector<OcTreeKey> > NodeNeighborMap;
 	void octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg);
 	void findFrontiers();
+	void findClusters();
+	void neighborRecursion(vector<OcTreeKey>& neighbors, Eigen::Vector3i& center, int& c_size);
 
 	ros::NodeHandle nh_;
 	ros::Subscriber octomap_sub_;
 	octomap::OcTree* oc_tree_;
 	NodeNeighborMap frontiers;
+	vector<OcTreeKey> clusterCenters;
 	Eigen::Array<int, Eigen::Dynamic, 3> neighbor_table;
 };
 
