@@ -9,6 +9,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   std::string octomap_topic;
   p_nh.getParam("octomap_topic", octomap_topic);
   octomap_sub_ = nh_.subscribe<octomap_msgs::Octomap>(octomap_topic, 10, FrontierBasedExploration3D::octomapCb);
+  neighbor_table = octomap_utils::createNeighborLUT();
 }
 
 FrontierBasedExploration3D::~FrontierBasedExploration3D() 

@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <fstream>
 
+#include "mavros_navigation/octomap_utils.h"
+
 using namespace std;
 using namespace octomap;
 using octomap_msgs::Octomap;
@@ -33,11 +35,14 @@ public:
 	~FrontierBasedExploration3D();
 
 private:
+	typedef std::map<OcTreeKey, vector<OcTreeKey> > NodeNeighborMap;
 	void octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg);
 
 	ros::NodeHandle nh_;
 	ros::Subscriber octomap_sub_;
 	octomap::OcTree* oc_tree_;
+	NodeNeighborMap frontiers;
+	Eigen::Array<int, Eigen::Dynamic, 3> neighbor_table;
 };
 
 }
