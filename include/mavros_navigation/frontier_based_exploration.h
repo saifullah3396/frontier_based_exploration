@@ -29,11 +29,23 @@ namespace mavros_navigation
 class FrontierBasedExploration3D
 {
 public:
-	FrontierBasedExploration3D() {}
+	FrontierBasedExploration3D() {
+		ros::NodeHandle p_nh("~");
+		std::string octomap_topic;
+		p_nh.getParam("octomap_topic", octomap_topic);
+		octomap_sub_ = nh_.subscribe<octomap_msgs::Octomap>(octomap_topic, 10, FrontierBasedExploration3D::octomapCb);
+	}
 	~FrontierBasedExploration3D() {}
 
 private:
+	void octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg) {
+		// Make an OcTree from the incoming octomap msg
+		oc_tree_ = boost::static_pointer_cast<OcTree>(octomap_msgs::fullMsgToMap(*octomap_msg));
+	}
 
+	ros::NodeHandle nh_;
+	ros::Subscriber octomap_sub_;
+	octomap::OcTree* oc_tree_;
 };
 
 }
