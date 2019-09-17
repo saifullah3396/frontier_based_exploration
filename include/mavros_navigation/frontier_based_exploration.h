@@ -37,6 +37,7 @@ public:
 private:
 	typedef std::map<OcTreeKey, vector<OcTreeKey> > NodeNeighborMap;
 	void octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg);
+	void findFrontiers();
 
 	ros::NodeHandle nh_;
 	ros::Subscriber octomap_sub_;
