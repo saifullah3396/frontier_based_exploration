@@ -1,4 +1,7 @@
-#include <mavros_navigation/3DFrontierBasedExploration.h>
+#include "mavros_navigation/frontier_based_exploration.h"
+
+namespace mavros_navigation
+{
 
 FrontierBasedExploration3D::FrontierBasedExploration3D() 
 {
@@ -15,4 +18,6 @@ FrontierBasedExploration3D::~FrontierBasedExploration3D()
 void FrontierBasedExploration3D::octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg) {
   // Make an OcTree from the incoming octomap msg
   oc_tree_ = boost::static_pointer_cast<OcTree>(octomap_msgs::fullMsgToMap(*octomap_msg));
+}
+
 }
