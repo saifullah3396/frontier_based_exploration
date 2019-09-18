@@ -28,6 +28,7 @@ namespace octomap_utils
   Eigen::Array<int, Eigen::Dynamic, 3> createNeighborLUT() {
 		Eigen::Array<int, Eigen::Dynamic, 3> table;
 		table.resize(N_NEIGHBORS, 3);
+    table.setZero();
 		// Initiailize face neighbors
 		table.row(W) <<  0,  1,  0;
 		table.row(E) <<  0, -1,  0;
@@ -56,11 +57,12 @@ namespace octomap_utils
     table.row(TNW) = table.row(T) + table.row(NW);
     table.row(TSW) = table.row(T) + table.row(SW);
     table.row(TNE) = table.row(TN) + table.row(E);
-    table.row(TSW) = table.row(TS) + table.row(E);
+    table.row(TSE) = table.row(TS) + table.row(E);
     table.row(BNW) = table.row(BN) + table.row(W);
     table.row(BSW) = table.row(BS) + table.row(W);
     table.row(BNE) = table.row(BN) + table.row(E);
-    table.row(BSE) = table.row(BS) + table.row(E);
+    table.row(BSE) = table.row(BS) + table.row(E); 
+    return table;
   }
 
 }
