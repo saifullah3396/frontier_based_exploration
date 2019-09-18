@@ -35,7 +35,7 @@ public:
 	~FrontierBasedExploration3D();
 
 private:
-	typedef std::map<OcTreeKey, vector<OcTreeKey> > NodeNeighborMap;
+	typedef std::tr1::unordered_map<OcTreeKey, vector<OcTreeKey>, OcTreeKey::KeyHash> NodeNeighborMap;
 	void octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg);
 	void findFrontiers();
 	void findClusters();
