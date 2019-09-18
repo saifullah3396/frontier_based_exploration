@@ -4,6 +4,11 @@
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "mavros_navigation_node");
-    ros::spin();
+    mavros_navigation::FrontierBasedExploration3D fbe3d;
+    auto rate = ros::Rate(10);
+    while (ros::ok()) {
+        ros::spinOnce();
+        rate.sleep();
+    }
     return 0;
 }
