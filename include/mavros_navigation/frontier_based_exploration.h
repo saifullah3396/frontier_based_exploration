@@ -18,8 +18,7 @@
 #include <vector>
 #include <stdio.h>
 #include <fstream>
-
-#include "mavros_navigation/octomap_utils.h"
+#include <Eigen/Dense>
 
 using namespace std;
 using namespace octomap;

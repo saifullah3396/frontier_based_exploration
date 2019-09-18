@@ -1,4 +1,5 @@
 #include "mavros_navigation/frontier_based_exploration.h"
+#include "mavros_navigation/octomap_utils.h"
 
 namespace mavros_navigation
 {

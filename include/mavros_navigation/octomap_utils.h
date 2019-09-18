@@ -1,4 +1,5 @@
-#pragma once
+#ifndef OCTOMAP_UTILS_H
+#define OCTOMAP_UTILS_H
 
 #include <octomap_ros/conversions.h>
 #include <octomap/octomap.h>
@@ -64,3 +65,4 @@ namespace octomap_utils
 
 }
 }
+#endif
