@@ -7,9 +7,9 @@ namespace mavros_navigation
 FrontierBasedExploration3D::FrontierBasedExploration3D() 
 {
   ros::NodeHandle p_nh("~");
-  std::string octomap_topic;
-  p_nh.getParam("octomap_topic", octomap_topic);
-  octomap_sub_ = nh_.subscribe<octomap_msgs::Octomap>(octomap_topic, 10, &FrontierBasedExploration3D::octomapCb, this);
+  std::string planning_scene_topic;
+  p_nh.getParam("planning_scene_topic", planning_scene_topic);
+  planning_scene_sub_ = nh_.subscribe<moveit_msgs::PlanningScene>(planning_scene_topic, 10, &FrontierBasedExploration3D::planningSceneCb, this);
   neighbor_table = octomap_utils::createNeighborLUT();
 }
 
@@ -17,15 +17,20 @@ FrontierBasedExploration3D::~FrontierBasedExploration3D()
 {
 }
 
-void FrontierBasedExploration3D::octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg) {
-  // Make an OcTree from the incoming octomap msg
-  oc_tree_ = boost::static_pointer_cast<OcTree>(octomap_msgs::fullMsgToMap(*octomap_msg));
+void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningSceneConstPtr& planning_scene) {
+  // Get the OcTree from the incoming moveit planning scene
+  if (planning_scene->world.octomap.octomap.data.size() != 0) {
+    oc_tree_ = boost::static_pointer_cast<OcTree>(octomap_msgs::fullMsgToMap(planning_scene->world.octomap.octomap));
+    findFrontiers();
+  }
 }
 
 void FrontierBasedExploration3D::findFrontiers() {
   ros::WallTime start_time = ros::WallTime::now();
   frontiers.clear();
+  ROS_INFO("Changed keys...");
   for (auto iter = oc_tree_->changedKeysBegin(); iter != oc_tree_->changedKeysEnd(); ++iter) {
+    ROS_INFO("Changed keys...");
     const auto& key = iter->first;
     auto node = oc_tree_->search(iter->first);
     auto occupied = oc_tree_->isNodeOccupied(node);

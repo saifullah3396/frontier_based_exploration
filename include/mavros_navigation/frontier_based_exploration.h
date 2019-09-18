@@ -14,6 +14,8 @@
 #include <octomap_msgs/BoundingBoxQuery.h>
 #include <octomap_msgs/conversions.h>
 
+#include <moveit_msgs/PlanningScene.h>
+
 #include <boost/pointer_cast.hpp>
 #include <vector>
 #include <stdio.h>
@@ -35,13 +37,13 @@ public:
 
 private:
 	typedef std::tr1::unordered_map<OcTreeKey, vector<OcTreeKey>, OcTreeKey::KeyHash> NodeNeighborMap;
-	void octomapCb(const octomap_msgs::Octomap::ConstPtr& octomap_msg);
+	void planningSceneCb(const moveit_msgs::PlanningSceneConstPtr& planning_scene);
 	void findFrontiers();
 	void findClusters();
 	void neighborRecursion(vector<OcTreeKey>& neighbors, Eigen::Vector3i& center, int& c_size);
 
 	ros::NodeHandle nh_;
-	ros::Subscriber octomap_sub_;
+	ros::Subscriber planning_scene_sub_;
 	octomap::OcTree* oc_tree_;
 	NodeNeighborMap frontiers;
 	vector<OcTreeKey> clusterCenters;
