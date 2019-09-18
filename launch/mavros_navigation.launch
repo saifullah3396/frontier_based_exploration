@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="octomap_topic" default="octomap" />
+
+  <!-- Start the mavros navigation node -->
+  <node name="mavros_navigation_node" pkg="mavros_navigation" type="mavros_navigation_node">
+    <param name="octomap_topic" value="$(arg octomap_topic)" />
+  </node>
+</launch>
