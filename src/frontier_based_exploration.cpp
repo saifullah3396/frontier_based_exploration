@@ -8,7 +8,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   ros::NodeHandle p_nh("~");
   std::string octomap_topic;
   p_nh.getParam("octomap_topic", octomap_topic);
-  octomap_sub_ = nh_.subscribe<octomap_msgs::Octomap>(octomap_topic, 10, FrontierBasedExploration3D::octomapCb);
+  octomap_sub_ = nh_.subscribe<octomap_msgs::Octomap>(octomap_topic, 10, &FrontierBasedExploration3D::octomapCb, this);
   neighbor_table = octomap_utils::createNeighborLUT();
 }
 
@@ -61,8 +61,7 @@ void FrontierBasedExploration3D::findFrontiers() {
         }
       }
       if (is_frontier) {
-        frontiers.insert(
-          std::pair<OcTreeKey, vector<OcTreeKey>>(key, neighbor_keys));
+        frontiers[key] = neighbor_keys;
       }
     }
   }
