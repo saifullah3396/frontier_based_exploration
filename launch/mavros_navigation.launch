@@ -3,6 +3,7 @@
 
   <!-- Start the mavros navigation node -->
   <node name="mavros_navigation_node" pkg="mavros_navigation" type="mavros_navigation_node" output="screen">
+    <param name="octomap_resolution" value="0.1" />
     <param name="planning_scene_topic" value="$(arg planning_scene_topic)" />
   </node>
 </launch>
