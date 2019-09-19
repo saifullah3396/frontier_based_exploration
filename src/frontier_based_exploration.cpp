@@ -7,20 +7,34 @@ namespace mavros_navigation
 FrontierBasedExploration3D::FrontierBasedExploration3D() 
 {
   ros::NodeHandle p_nh("~");
+  double octomap_resolution;
   std::string planning_scene_topic;
   p_nh.getParam("planning_scene_topic", planning_scene_topic);
+  p_nh.getParam("octomap_resolution", octomap_resolution);
+  oc_tree_ = new OcTree(octomap_resolution);
+  oc_tree_->enableChangeDetection(true);
   planning_scene_sub_ = nh_.subscribe<moveit_msgs::PlanningScene>(planning_scene_topic, 10, &FrontierBasedExploration3D::planningSceneCb, this);
   neighbor_table = octomap_utils::createNeighborLUT();
 }
 
 FrontierBasedExploration3D::~FrontierBasedExploration3D() 
 {
+  if (oc_tree_) {
+    delete oc_tree_;
+    oc_tree_ = nullptr;
+  }
 }
 
 void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningSceneConstPtr& planning_scene) {
   // Get the OcTree from the incoming moveit planning scene
-  if (planning_scene->world.octomap.octomap.data.size() != 0) {
-    oc_tree_ = boost::static_pointer_cast<OcTree>(octomap_msgs::fullMsgToMap(planning_scene->world.octomap.octomap));
+  const auto& octomap = planning_scene->world.octomap.octomap;
+  if (octomap.data.size() != 0) {
+    octomap::OcTree* new_oc_tree_ = 
+      boost::static_pointer_cast<OcTree>(octomap_msgs::fullMsgToMap(planning_scene->world.octomap.octomap));
+    for (auto iter = new_oc_tree_->begin(); iter != oc_tree_->end_leafs(); ++iter) { // find changed nodes between previous and new tree
+      auto node = new_oc_tree_->search(iter.getKey());
+      oc_tree_->updateNode(iter.getCoordinate(), new_oc_tree_->isNodeOccupied(node));
+    }
     findFrontiers();
   }
 }
@@ -28,9 +42,7 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
 void FrontierBasedExploration3D::findFrontiers() {
   ros::WallTime start_time = ros::WallTime::now();
   frontiers.clear();
-  ROS_INFO("Changed keys...");
   for (auto iter = oc_tree_->changedKeysBegin(); iter != oc_tree_->changedKeysEnd(); ++iter) {
-    ROS_INFO("Changed keys...");
     const auto& key = iter->first;
     auto node = oc_tree_->search(iter->first);
     auto occupied = oc_tree_->isNodeOccupied(node);
@@ -71,9 +83,10 @@ void FrontierBasedExploration3D::findFrontiers() {
       }
     }
   }
+  ROS_INFO_STREAM("frontiers detected: " << frontiers.size());
   oc_tree_->resetChangeDetection();
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  ROS_DEBUG_STREAM("find_frontier used total " << total_time << " sec");
+  ROS_INFO_STREAM("find_frontier used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::findClusters()
