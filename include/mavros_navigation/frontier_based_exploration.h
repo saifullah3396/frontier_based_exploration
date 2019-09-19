@@ -1,20 +1,18 @@
 #pragma once
 
-#include <ros/ros.h>
-#include <visualization_msgs/MarkerArray.h>
-#include <nav_msgs/OccupancyGrid.h>
-#include <std_msgs/ColorRGBA.h>
-#include <sensor_msgs/PointCloud2.h>
-
-#include <tf/transform_listener.h>
-#include <tf/message_filter.h>
+#include <moveit_msgs/PlanningScene.h>
 #include <message_filters/subscriber.h>
+#include <nav_msgs/OccupancyGrid.h>
 #include <octomap_msgs/Octomap.h>
 #include <octomap_msgs/GetOctomap.h>
 #include <octomap_msgs/BoundingBoxQuery.h>
 #include <octomap_msgs/conversions.h>
-
-#include <moveit_msgs/PlanningScene.h>
+#include <ros/ros.h>
+#include <std_msgs/ColorRGBA.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <tf/transform_listener.h>
+#include <tf/message_filter.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include <boost/pointer_cast.hpp>
 #include <vector>
@@ -43,10 +41,14 @@ private:
 	void neighborRecursion(vector<OcTreeKey>& neighbors, Eigen::Vector3i& center, int& c_size);
 
 	ros::NodeHandle nh_;
+	bool publish_frontiers_ = {false};
+	ros::Publisher frontiers_pub_;
+	bool publish_clusters_ = {false};
+	ros::Publisher clusters_pub_;
 	ros::Subscriber planning_scene_sub_;
 	octomap::OcTree* oc_tree_;
 	NodeNeighborMap frontiers;
-	vector<OcTreeKey> clusterCenters;
+	vector<octomap::point3d> clusterCenters;
 	Eigen::Array<int, Eigen::Dynamic, 3> neighbor_table;
 };
 
