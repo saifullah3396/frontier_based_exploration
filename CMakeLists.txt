@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(mavros_navigation)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11 -DCGAL_HEADER_ONLY)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -25,6 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(octomap 1.9 REQUIRED)
 add_definitions(-DOCTOMAP_NODEBUGOUT)
+find_package(CGAL)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -160,6 +161,7 @@ add_executable(${PROJECT_NAME}_node src/mavros_navigation_node.cpp src/frontier_
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${OCTOMAP_LIBRARIES}
+  CGAL::CGAL
 )
 
 #############
