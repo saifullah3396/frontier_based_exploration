@@ -3,7 +3,16 @@
 
   <!-- Start the mavros navigation node -->
   <node name="mavros_navigation_node" pkg="mavros_navigation" type="mavros_navigation_node" output="screen">
+  	<param name="frame_id" value="map" />
     <param name="octomap_resolution" value="0.15" />
     <param name="planning_scene_topic" value="$(arg planning_scene_topic)" />
+    <param name="frontier_search_min_z" value="0.0" />
+    <param name="frontier_search_max_z" value="2.5" />
+	<param name="vis_octree" value="true" />
+	<param name="vis_frontiers" value="true" />
+	<param name="vis_voids" value="false" />
+	<param name="vis_clusters" value="true" />
+	<param name="vis_hull" value="true" />
+	<param name="vis_rand_sample" value="true" />
   </node>
 </launch>
