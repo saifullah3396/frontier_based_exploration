@@ -179,7 +179,7 @@ void FrontierBasedExploration3D::publishVisCells(
   if (pubs_[name]) {
     std_msgs::ColorRGBA c;
     c.r = color[0];
-    c.g = color[1];clusters_
+    c.g = color[1];
     c.b = color[2];
     auto markers = toMarkers(vis_type, cell_marker_, c);
     pubs_[name].publish(markers);
@@ -213,6 +213,8 @@ void FrontierBasedExploration3D::findFrontiers() {
     auto coord = oc_tree_->keyToCoord(key);
     input_points.push_back(Point_3(coord.x(), coord.y(), coord.z()));
     auto node = oc_tree_->search(key);
+    if (!node)
+      continue;
     auto occupied = oc_tree_->isNodeOccupied(node);
     if (!occupied) {
       bool is_frontier = false;
@@ -226,21 +228,14 @@ void FrontierBasedExploration3D::findFrontiers() {
           key.k[2] + neighbor_table_(i, 2));
         auto n_node = oc_tree_->search(n_key);
         if (!is_frontier) {
-          if (!n_node) { // If neighbor is free or unknown
-            free_neighbor_exists = true;
-          } else {
-            // if at least one neighbor is occupied 
-            //if (oc_tree_->isNodeOccupied(n_node)) {
-            //  occupied_neighbor_exists = true;
-            //} else {
-            //if (!oc_tree_->isNodeOccupied(n_node)) {
-              // only unoccupied cells can be frontiers so add only those neighbors
-              //neighbor_keys.push_back(n_key);
-              //free_neighbor_exists = true;
-            //}
-          }
-          if (free_neighbor_exists) { // && occupied_neighbor_exists) {
+          if (!n_node) { // If neighbor is unknown
             is_frontier = true;
+          } else {
+            // if neighbor is unoccupied
+            if (!oc_tree_->isNodeOccupied(n_node)) {
+              // only unoccupied cells can be frontiers so add only those neighbors
+              neighbor_keys.push_back(n_key);
+            }
           }
         } else {
           if (n_node && !oc_tree_->isNodeOccupied(n_node)) {
