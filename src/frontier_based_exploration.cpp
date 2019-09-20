@@ -10,6 +10,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   // initialize parameters
   std::string planning_scene_topic;
   p_nh.getParam("frame_id", frame_id_);
+  p_nh.getParam("debug", debug_);
   p_nh.getParam("octomap_resolution", octomap_resolution_);
   p_nh.getParam("planning_scene_topic", planning_scene_topic);
   p_nh.getParam("frontier_search_min_z", frontier_search_min_z_);
@@ -82,17 +83,19 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
     findVoidClusters();
 
     // publish visuals 
-    publishOctree();
-    publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
-    publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
-    publishVisCells("vis_clusters", f_cluster_centers_, Eigen::Vector3f(0.0, 0.0, 1.0));
-    for (const auto& cluster: f_clusters_) {
-      Eigen::Vector3f color(
-        rand() / (RAND_MAX), rand() / (RAND_MAX), rand() / (RAND_MAX));
-      publishVisCells("vis_clusters", cluster, color);
+    if (debug_) {
+      publishOctree();
+      publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
+      publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
+      publishVisCells("vis_clusters", f_cluster_centers_, Eigen::Vector3f(0.0, 0.0, 1.0));
+      for (const auto& cluster: f_clusters_) {
+        Eigen::Vector3f color(
+          rand() / (RAND_MAX), rand() / (RAND_MAX), rand() / (RAND_MAX));
+        publishVisCells("vis_clusters", cluster, color);
+      }
+      publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
+      publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
     }
-    publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
-    publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
   }
 }
 

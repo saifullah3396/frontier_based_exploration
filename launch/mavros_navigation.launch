@@ -8,6 +8,7 @@
     <param name="planning_scene_topic" value="$(arg planning_scene_topic)" />
     <param name="frontier_search_min_z" value="0.0" />
     <param name="frontier_search_max_z" value="2.5" />
+  <param name="debug" value="true" />
 	<param name="vis_octree" value="true" />
 	<param name="vis_frontiers" value="true" />
 	<param name="vis_voids" value="false" />

@@ -111,6 +111,7 @@ private:
 	ros::Subscriber planning_scene_sub_; // moveit planning scene subscriber
 	// ros params
 	std::string frame_id_; // octomap frame id
+	bool debug_; // whether to debug or not
 	double octomap_resolution_; // octomap resolution
 	double frontier_search_min_z_; // minimum search height 
 	double frontier_search_max_z_; // maximum search height 
