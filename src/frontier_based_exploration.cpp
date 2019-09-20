@@ -74,14 +74,19 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
       if (iter.getCoordinate().z() > frontier_search_min_z_ && iter.getCoordinate().z() < frontier_search_max_z_)
         oc_tree_->updateNode(iter.getCoordinate(), new_oc_tree_->isNodeOccupied(node));
     }
+
+    // update exploration
     findFrontiers();
     findVoids();
-    //findClusters();
+    findFrontierClusters();
+    findVoidClusters();
+
+    // publish visuals 
     publishOctree();
     publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
     publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
-    publishVisCells("vis_clusters", cluster_centers_, Eigen::Vector3f(0.0, 0.0, 1.0));
-    for (const auto& cluster: clusters_) {
+    publishVisCells("vis_clusters", f_cluster_centers_, Eigen::Vector3f(0.0, 0.0, 1.0));
+    for (const auto& cluster: f_clusters_) {
       Eigen::Vector3f color(
         rand() / (RAND_MAX), rand() / (RAND_MAX), rand() / (RAND_MAX));
       publishVisCells("vis_clusters", cluster, color);
@@ -171,7 +176,7 @@ void FrontierBasedExploration3D::publishVisCells(
   if (pubs_[name]) {
     std_msgs::ColorRGBA c;
     c.r = color[0];
-    c.g = color[1];
+    c.g = color[1];clusters_
     c.b = color[2];
     auto markers = toMarkers(vis_type, cell_marker_, c);
     pubs_[name].publish(markers);
@@ -296,6 +301,19 @@ void FrontierBasedExploration3D::findFrontierClusters()
 
 void FrontierBasedExploration3D::findVoidClusters()
 {
+  ros::WallTime start_time = ros::WallTime::now();
+  v_clusters_.clear();
+  std::vector<std::array<double, 3>> kmeans_input;
+  for (auto& v : voids_) {
+    kmeans_input.push_back(std::array<double, 3>{v.x(), v.y(), v.z()});
+  }
+  auto v_cluster_data = dkm::kmeans_lloyd(kmeans_input, 3);
+  std::cout << "Means:" << std::endl;
+  for (const auto& mean : std::get<0>(v_cluster_data)) {
+    std::cout << "\t(" << mean[0] << "," << mean[1] << ")" << std::endl;
+  }
+  double total_time = (ros::WallTime::now() - start_time).toSec();
+  ROS_INFO_STREAM("findVoidClusters() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors, octomap::point3d& center, int& c_size) {
