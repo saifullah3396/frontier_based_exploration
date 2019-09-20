@@ -52,6 +52,17 @@ using octomap_msgs::Octomap;
 namespace mavros_navigation
 {
 
+struct FrontierCluster {
+  FrontierCluster(
+  	const octomap::point3d& center) :
+  	center_(center)
+  {
+  }
+
+  vector<OcTreeKey> frontiers_;
+  octomap::point3d center_;
+};
+
 class FrontierBasedExploration3D
 {
 public:
@@ -92,7 +103,7 @@ private:
 	void findVoids();
 	void findFrontierClusters();
 	void findVoidClusters();
-	void neighborRecursion(vector<OcTreeKey>& neighbors, octomap::point3d& center, int& c_size);
+	void neighborRecursion(vector<OcTreeKey>& neighbors);
 
 	// ros
 	ros::NodeHandle nh_; // ros node handle
@@ -120,8 +131,7 @@ private:
 	octomap::OcTree* oc_tree_; // main octree
 	NodeNeighborMap frontiers_; // detected frontiers
 	NodeSearchMap frontiers_search_; // boolean map used for setting frontier as searched/unsearched during clustering
-	vector<vector<OcTreeKey>> f_clusters_; // detected fronter clusters
-	vector<octomap::point3d> f_cluster_centers_; // geometric cluster centers
+	vector<FrontierCluster> f_clusters_; // detected fronter clusters
 	vector<vector<octomap::point3d>> v_clusters_; // detected void clusters
 	vector<octomap::point3d> voids_; // detected voids
 	Eigen::Array<int, Eigen::Dynamic, 3> neighbor_table_; // lookup table for searching close neighbors

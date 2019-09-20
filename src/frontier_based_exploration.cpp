@@ -78,23 +78,25 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
 
     // update exploration
     findFrontiers();
-    findVoids();
+    //findVoids();
     findFrontierClusters();
-    findVoidClusters();
+    //findVoidClusters();
 
     // publish visuals 
     if (debug_) {
       publishOctree();
       publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
-      publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
-      publishVisCells("vis_clusters", f_cluster_centers_, Eigen::Vector3f(0.0, 0.0, 1.0));
+      //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
+      vector<octomap::point3d> f_cluster_centers;
       for (const auto& cluster: f_clusters_) {
         Eigen::Vector3f color(
           rand() / (RAND_MAX), rand() / (RAND_MAX), rand() / (RAND_MAX));
-        publishVisCells("vis_clusters", cluster, color);
+        publishVisCells("vis_f_clusters", cluster.frontiers_, color);
+        f_cluster_centers.push_back(cluster.center_);
       }
-      publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
-      publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
+      publishVisCells("vis_f_clusters", f_cluster_centers, Eigen::Vector3f(0.0, 0.0, 1.0));
+      //publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
+      //publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
     }
   }
 }
@@ -278,21 +280,18 @@ void FrontierBasedExploration3D::findVoids() {
 void FrontierBasedExploration3D::findFrontierClusters()
 {
   ros::WallTime start_time = ros::WallTime::now();
-  f_cluster_centers_.clear();
   f_clusters_.clear();
   for (auto& f : frontiers_) {
     if (!frontiers_search_[f.first]) {
       int c_size = 1;
-      f_clusters_.push_back(vector<OcTreeKey>());
-      auto center = oc_tree_->keyToCoord(f.first);
+      f_clusters_.push_back(FrontierCluster(oc_tree_->keyToCoord(f.first)));
       auto nn = f.second;
       frontiers_search_[f.first] = true;
-      neighborRecursion(nn, center, c_size); // one f_cluster is finished
-      center /= c_size; // find the f_cluster center
-      f_cluster_centers_.push_back(center);
+      neighborRecursion(nn); // one f_cluster is finished
+      f_clusters_.back().center_ /= f_clusters_.back().frontiers_.size(); // find the f_cluster center
     }
   }
-  ROS_INFO_STREAM("f_clusters detected: " << f_cluster_centers_.size());
+  ROS_INFO_STREAM("f_clusters detected: " << f_clusters_.size());
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
 }
@@ -314,17 +313,16 @@ void FrontierBasedExploration3D::findVoidClusters()
   ROS_INFO_STREAM("findVoidClusters() used total " << total_time << " sec");
 }
 
-void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors, octomap::point3d& center, int& c_size) {
+void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors) {
   for (auto& n : neighbors) { // all neighbors of f
     if (frontiers_.find(n) != frontiers_.end() && // if neighbor is also a frontier
         !frontiers_search_[n]) // not already searched
     { 
-      center += oc_tree_->keyToCoord(n);
-      f_clusters_.back().push_back(n);
-      c_size++;
+      f_clusters_.back().frontiers_.push_back(n);
+      f_clusters_.back().center_ += oc_tree_->keyToCoord(n);
       auto nn = frontiers_[n]; // get second neighbors
       frontiers_search_[n] = true;
-      neighborRecursion(nn, center, c_size); // do it again
+      neighborRecursion(nn); // do it again
     }
   }
 }

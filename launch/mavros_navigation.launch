@@ -12,8 +12,9 @@
 	<param name="vis_octree" value="true" />
 	<param name="vis_frontiers" value="true" />
 	<param name="vis_voids" value="false" />
-	<param name="vis_clusters" value="true" />
-	<param name="vis_hull" value="true" />
-	<param name="vis_rand_sample" value="true" />
+	<param name="vis_f_clusters" value="true" />
+  <param name="vis_v_clusters" value="false" />
+	<param name="vis_hull" value="false" />
+	<param name="vis_rand_sample" value="false" />
   </node>
 </launch>
