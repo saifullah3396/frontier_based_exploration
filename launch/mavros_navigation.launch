@@ -4,9 +4,12 @@
   <!-- Start the mavros navigation node -->
   <node name="mavros_navigation_node" pkg="mavros_navigation" type="mavros_navigation_node" output="screen">
   	<param name="frame_id" value="map" />
+    <param name="sensor_frame_id" value="camera_link" />
     <param name="octomap_resolution" value="0.15" />
+    <param name="min_un_neighbor_count" value="3" />
+    <param name="sensor_max_range" value="5.0" />
     <param name="planning_scene_topic" value="$(arg planning_scene_topic)" />
-    <param name="frontier_search_min_z" value="0.0" />
+    <param name="frontier_search_min_z" value="-0.25" />
     <param name="frontier_search_max_z" value="2.5" />
   <param name="debug" value="true" />
 	<param name="vis_octree" value="true" />

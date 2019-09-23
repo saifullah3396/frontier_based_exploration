@@ -107,6 +107,8 @@ private:
 
 	// ros
 	ros::NodeHandle nh_; // ros node handle
+	tf::TransformListener tf_listener; // tf listener
+
 	map<std::string, ros::Publisher> pubs_; // ros publisher
 	vector<std::string> publisher_names_ { // names of the publishers 
 		"vis_octree",
@@ -122,10 +124,14 @@ private:
 	ros::Subscriber planning_scene_sub_; // moveit planning scene subscriber
 	// ros params
 	std::string frame_id_; // octomap frame id
+	std::string sensor_frame_id_; // sensor frame id
+	tf::StampedTransform sensor_tf_; // sensor frame tf
 	bool debug_; // whether to debug or not
 	double octomap_resolution_; // octomap resolution
 	double frontier_search_min_z_; // minimum search height 
 	double frontier_search_max_z_; // maximum search height 
+	int min_un_neighbor_count_ = {3}; // minimum number of unknown neighbors for frontier
+	double sensor_max_range_; // maximum sensor range
 
 	// fbe3d
 	octomap::OcTree* oc_tree_; // main octree

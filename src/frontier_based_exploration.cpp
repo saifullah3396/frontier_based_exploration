@@ -10,11 +10,14 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   // initialize parameters
   std::string planning_scene_topic;
   p_nh.getParam("frame_id", frame_id_);
+  p_nh.getParam("sensor_frame_id", sensor_frame_id_);
   p_nh.getParam("debug", debug_);
   p_nh.getParam("octomap_resolution", octomap_resolution_);
   p_nh.getParam("planning_scene_topic", planning_scene_topic);
   p_nh.getParam("frontier_search_min_z", frontier_search_min_z_);
   p_nh.getParam("frontier_search_max_z", frontier_search_max_z_);
+  p_nh.getParam("min_un_neighbor_count", min_un_neighbor_count_);
+  p_nh.getParam("sensor_max_range", sensor_max_range_);
 
   // initialize publishers
   for (int i = 0; i < publisher_names_.size(); ++i) { 
@@ -76,6 +79,14 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
         oc_tree_->updateNode(iter.getCoordinate(), new_oc_tree_->isNodeOccupied(node));
     }
 
+    try{
+      tf_listener.lookupTransform(frame_id_, sensor_frame_id_, ros::Time(0), sensor_tf_);
+    }
+    catch (tf::TransformException ex){
+      ROS_ERROR("%s",ex.what());
+      ros::Duration(1.0).sleep();
+    }
+
     // update exploration
     findFrontiers();
     //findVoids();
@@ -117,6 +128,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
+  marker.color.a = 0.75;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
@@ -138,6 +150,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
+  marker.color.a = 0.75;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
@@ -158,6 +171,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
+  marker.color.a = 0.75;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
@@ -183,6 +197,7 @@ void FrontierBasedExploration3D::publishVisCells(
     c.r = color[0];
     c.g = color[1];
     c.b = color[2];
+    c.a = 0.75;
     auto markers = toMarkers(vis_type, cell_marker_, c);
     pubs_[name].publish(markers);
   }
@@ -199,6 +214,7 @@ void FrontierBasedExploration3D::publishVisPoints(
     c.r = color[0];
     c.g = color[1];
     c.b = color[2];
+    c.a = 0.75;
     auto markers = toMarkers(vis_type, point_marker_, c);
     pubs_[name].publish(markers);
   }
@@ -209,20 +225,28 @@ void FrontierBasedExploration3D::findFrontiers() {
   frontiers_.clear();
   frontiers_search_.clear();
   
-  std::vector<Point_3> input_points;
+  //std::vector<Point_3> input_points;
+  auto sensor_origin = sensor_tf_.getOrigin();
   for (auto iter = oc_tree_->changedKeysBegin(); iter != oc_tree_->changedKeysEnd(); ++iter) {
     const auto& key = iter->first;
     auto coord = oc_tree_->keyToCoord(key);
-    input_points.push_back(Point_3(coord.x(), coord.y(), coord.z()));
+    //input_points.push_back(Point_3(coord.x(), coord.y(), coord.z()));
     auto node = oc_tree_->search(key);
     if (!node)
       continue;
     auto occupied = oc_tree_->isNodeOccupied(node);
     if (!occupied) {
+      // check if node is at max range from sensor and only get those as frontiers
+      octomap::point3d diff;
+      diff.x() = sensor_origin.x() - coord.x();
+      diff.y() = sensor_origin.y() - coord.y();
+      diff.z() = sensor_origin.z() - coord.z();
+      if (diff.norm() < sensor_max_range_)
+        continue;
+
       bool is_frontier = false;
-      bool free_neighbor_exists = false;
-      bool occupied_neighbor_exists = false;
       vector<OcTreeKey> neighbor_keys;
+      int un_count = 0;
       for (int i = 0; i < octomap_utils::N_NEIGHBORS; ++i) {
         auto n_key = OcTreeKey(
           key.k[0] + neighbor_table_(i, 0),
@@ -231,7 +255,9 @@ void FrontierBasedExploration3D::findFrontiers() {
         auto n_node = oc_tree_->search(n_key);
         if (!is_frontier) {
           if (!n_node) { // If neighbor is unknown
-            is_frontier = true;
+            un_count++;
+            if (un_count >= min_un_neighbor_count_)
+              is_frontier = true;
           } else {
             // if neighbor is unoccupied
             if (!oc_tree_->isNodeOccupied(n_node)) {
@@ -252,7 +278,7 @@ void FrontierBasedExploration3D::findFrontiers() {
       }
     }
   }
-  hull_points_.insert(hull_points_.begin(), input_points.begin(), input_points.end());
+  //hull_points_.insert(hull_points_.begin(), input_points.begin(), input_points.end());
   oc_tree_->resetChangeDetection();
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_INFO_STREAM("findFrontiers() used total " << total_time << " sec");
@@ -283,7 +309,6 @@ void FrontierBasedExploration3D::findFrontierClusters()
   f_clusters_.clear();
   for (auto& f : frontiers_) {
     if (!frontiers_search_[f.first]) {
-      int c_size = 1;
       f_clusters_.push_back(FrontierCluster(oc_tree_->keyToCoord(f.first)));
       auto nn = f.second;
       frontiers_search_[f.first] = true;
@@ -292,6 +317,10 @@ void FrontierBasedExploration3D::findFrontierClusters()
     }
   }
   ROS_INFO_STREAM("f_clusters detected: " << f_clusters_.size());
+  ROS_INFO_STREAM("Cluster centers:");
+  for (auto& c : f_clusters_) {
+    ROS_INFO_STREAM(c.center_);
+  }
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
 }
