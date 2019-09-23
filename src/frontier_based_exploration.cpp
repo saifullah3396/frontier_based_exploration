@@ -103,7 +103,9 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
       vector<octomap::point3d> f_cluster_centers;
       for (const auto& cluster: f_clusters_) {
         Eigen::Vector3f color(
-          rand() / (RAND_MAX), rand() / (RAND_MAX), rand() / (RAND_MAX));
+          (float)rand() / (float)(RAND_MAX), 
+          (float)rand() / (float)(RAND_MAX),
+          (float)rand() / (float)(RAND_MAX));
         publishVisCells("vis_f_clusters", cluster.frontiers_, color);
         f_cluster_centers.push_back(cluster.center_);
       }
