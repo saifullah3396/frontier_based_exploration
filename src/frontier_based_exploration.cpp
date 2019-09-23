@@ -17,6 +17,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   p_nh.getParam("frontier_search_min_z", frontier_search_min_z_);
   p_nh.getParam("frontier_search_max_z", frontier_search_max_z_);
   p_nh.getParam("min_un_neighbor_count", min_un_neighbor_count_);
+  p_nh.getParam("min_f_cluster_size", min_f_cluster_size_);
   p_nh.getParam("sensor_max_range", sensor_max_range_);
   p_nh.getParam("vis_alpha", vis_alpha_);
   p_nh.getParam("vis_duration", vis_duration_);
@@ -113,7 +114,6 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
       //publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
       //publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
     }
-    ros::shutdown();
   }
 }
 
@@ -311,21 +311,24 @@ void FrontierBasedExploration3D::findVoids() {
 void FrontierBasedExploration3D::findFrontierClusters()
 {
   ros::WallTime start_time = ros::WallTime::now();
-  f_clusters_.clear();
   for (auto& f : frontiers_) {
     if (!frontiers_search_[f.first]) {
-      f_clusters_.push_back(FrontierCluster(oc_tree_->keyToCoord(f.first)));
+      f_clusters_.push_back(FrontierCluster(f.first, oc_tree_->keyToCoord(f.first)));
       auto nn = f.second;
       frontiers_search_[f.first] = true;
       neighborRecursion(nn); // one f_cluster is finished
       f_clusters_.back().center_ /= f_clusters_.back().frontiers_.size(); // find the f_cluster center
     }
   }
-  ROS_INFO_STREAM("f_clusters detected: " << f_clusters_.size());
-  ROS_INFO_STREAM("Cluster centers:");
-  for (auto& c : f_clusters_) {
-    ROS_INFO_STREAM(c.center_);
-  }
+
+  // Remove clusters if searched or smaller than minimum cluster size
+  auto end = std::remove_if(f_clusters_.begin(), f_clusters_.end(),
+    [&](const FrontierCluster& c) {
+      return c.searched_ || c.frontiers_.size() < min_f_cluster_size_;
+    });
+  f_clusters_.erase(end, f_clusters_.end());
+  ROS_INFO_STREAM("Clusters size:" << f_clusters_.size());
+
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
 }

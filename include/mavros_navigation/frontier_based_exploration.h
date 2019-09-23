@@ -54,13 +54,16 @@ namespace mavros_navigation
 
 struct FrontierCluster {
   FrontierCluster(
+		const OcTreeKey& centerKey,
   	const octomap::point3d& center) :
   	center_(center)
   {
+		frontiers_.push_back(centerKey);
   }
 
-  vector<OcTreeKey> frontiers_;
-  octomap::point3d center_;
+  vector<OcTreeKey> frontiers_; // All the octocells in the cluster
+  octomap::point3d center_; // Cluster center
+	bool searched_ = {false}; // Whether this cluster has been navigated to or not
 };
 
 class FrontierBasedExploration3D
@@ -130,7 +133,8 @@ private:
 	double octomap_resolution_; // octomap resolution
 	double frontier_search_min_z_; // minimum search height 
 	double frontier_search_max_z_; // maximum search height 
-	int min_un_neighbor_count_ = {3}; // minimum number of unknown neighbors for frontier
+	int min_un_neighbor_count_ = {1}; // minimum number of unknown neighbors for frontier
+	int min_f_cluster_size_; // minimum number of elements in cluster frontier
 	double sensor_max_range_; // maximum sensor range
 	double vis_alpha_; // opacity of visualization markers
 	double vis_duration_; // duration of visualization markers
