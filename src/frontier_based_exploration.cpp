@@ -18,6 +18,8 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   p_nh.getParam("frontier_search_max_z", frontier_search_max_z_);
   p_nh.getParam("min_un_neighbor_count", min_un_neighbor_count_);
   p_nh.getParam("sensor_max_range", sensor_max_range_);
+  p_nh.getParam("vis_alpha", vis_alpha_);
+  p_nh.getParam("vis_duration", vis_duration_);
 
   // initialize publishers
   for (int i = 0; i < publisher_names_.size(); ++i) { 
@@ -44,8 +46,8 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   cell_marker_.ns = "fbe3d";
   cell_marker_.type = visualization_msgs::Marker::CUBE;
   cell_marker_.action = visualization_msgs::Marker::MODIFY;
-  cell_marker_.color.a = 0.5;
-  cell_marker_.lifetime = ros::Duration(0.5);
+  cell_marker_.color.a = vis_alpha_;
+  cell_marker_.lifetime = ros::Duration(vis_duration_);
   cell_marker_.scale.x = octomap_resolution_;
   cell_marker_.scale.y = octomap_resolution_;
   cell_marker_.scale.z = octomap_resolution_;
@@ -109,6 +111,7 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
       //publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
       //publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
     }
+    ros::shutdown();
   }
 }
 
