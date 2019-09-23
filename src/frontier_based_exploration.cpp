@@ -8,7 +8,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   ros::NodeHandle p_nh("~");
 
   // initialize parameters
-  std::string planning_scene_topic;
+  std::string planning_scene_topic, sensor_topic;
   p_nh.getParam("frame_id", frame_id_);
   p_nh.getParam("sensor_frame_id", sensor_frame_id_);
   p_nh.getParam("debug", debug_);
@@ -19,6 +19,8 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   p_nh.getParam("min_un_neighbor_count", min_un_neighbor_count_);
   p_nh.getParam("min_f_cluster_size", min_f_cluster_size_);
   p_nh.getParam("sensor_max_range", sensor_max_range_);
+  p_nh.getParam("frontier_exp_range", frontier_exp_range_);
+  p_nh.getParam("sensor_horizontal_fov", sensor_horizontal_fov_);
   p_nh.getParam("vis_alpha", vis_alpha_);
   p_nh.getParam("vis_duration", vis_duration_);
 
@@ -40,7 +42,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   planning_scene_sub_ = nh_.subscribe<moveit_msgs::PlanningScene>(planning_scene_topic, 10, &FrontierBasedExploration3D::planningSceneCb, this);
 
   // create neighbor
-  neighbor_table_ = octomap_utils::createNeighborLUT();
+  neighbor_table_ = utils::createNeighborLUT();
 
   // setup visualization marker settings
   cell_marker_.header.frame_id = frame_id_;
@@ -58,6 +60,12 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   point_marker_.scale.x = points_size;
   point_marker_.scale.y = points_size;
   point_marker_.scale.z = points_size;
+  arrow_marker_ = point_marker_;
+  arrow_marker_.type = visualization_msgs::Marker::ARROW;
+  auto arrows_size = 0.1;
+  arrow_marker_.scale.x = 0.05;
+  arrow_marker_.scale.y = 0.1;
+  arrow_marker_.scale.z = 0.05;
 }
 
 FrontierBasedExploration3D::~FrontierBasedExploration3D() 
@@ -82,10 +90,15 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
         oc_tree_->updateNode(iter.getCoordinate(), new_oc_tree_->isNodeOccupied(node));
     }
 
-    try{
-      tf_listener.lookupTransform(frame_id_, sensor_frame_id_, ros::Time(0), sensor_tf_);
+    if (sensor_frame_id_ == "") {
+      ROS_ERROR("sensor_frame_id_ not set! See if sensor information callback is fine.");
+      return;
     }
-    catch (tf::TransformException ex){
+
+    try {
+      // sensor frame to map frame
+      tf_listener.lookupTransform(frame_id_, sensor_frame_id_, ros::Time(0), sensor_tf_);
+    } catch (tf::TransformException ex) {
       ROS_ERROR("%s",ex.what());
       ros::Duration(1.0).sleep();
     }
@@ -101,16 +114,17 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
       publishOctree();
       publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
       //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
-      vector<octomap::point3d> f_cluster_centers;
+      vector<Eigen::Vector3d> f_cluster_centers, f_cluster_normals;
       for (const auto& cluster: f_clusters_) {
         Eigen::Vector3f color(
           (float)rand() / (float)(RAND_MAX), 
           (float)rand() / (float)(RAND_MAX),
           (float)rand() / (float)(RAND_MAX));
-        publishVisCells("vis_f_clusters", cluster.frontiers_, color);
+        //publishVisCells("vis_f_clusters", cluster.frontiers_, color);
         f_cluster_centers.push_back(cluster.center_);
+        f_cluster_normals.push_back(cluster.normal_);
       }
-      publishVisCells("vis_f_clusters", f_cluster_centers, Eigen::Vector3f(0.0, 0.0, 1.0));
+      publishVisCellsWithDirections("vis_f_clusters", f_cluster_centers, f_cluster_normals, Eigen::Vector3f(0.0, 0.0, 1.0));
       //publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
       //publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
     }
@@ -171,6 +185,27 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
 
 template <>
 visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
+  const std::vector<Eigen::Vector3d>& cells,
+  visualization_msgs::Marker& marker,
+  const std_msgs::ColorRGBA& color) 
+{
+  marker.color = color;
+  marker.color.a = 0.75;
+  int id = 0;
+  visualization_msgs::MarkerArray markers;
+  for (const auto& c: cells) {
+    marker.header.stamp = ros::Time();
+    marker.id = id++;
+    marker.pose.position.x = c[0];
+    marker.pose.position.y = c[1];
+    marker.pose.position.z = c[2];
+    markers.markers.push_back(marker);
+  }
+  return markers;
+}
+
+template <>
+visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std::vector<OcTreeKey>& cells,
   visualization_msgs::Marker& marker,
   const std_msgs::ColorRGBA& color) 
@@ -191,6 +226,34 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   return markers;
 }
 
+visualization_msgs::MarkerArray FrontierBasedExploration3D::toArrowMarkers(
+  const std::vector<Eigen::Vector3d>& cells,
+  const std::vector<Eigen::Vector3d>& directions,
+  visualization_msgs::Marker& marker,
+  const std_msgs::ColorRGBA& color) 
+{
+  marker.color = color;
+  marker.color.a = 0.75;
+  int id = 0;
+  visualization_msgs::MarkerArray markers;
+  for (int i = 0; i < cells.size(); ++i) {
+    marker.points.clear();
+    marker.header.stamp = ros::Time();
+    marker.id = id++;
+    geometry_msgs::Point start, end;
+    start.x = cells[i][0];
+    start.y = cells[i][1];
+    start.z = cells[i][2];
+    end.x = cells[i][0] + directions[i][0] * 0.5;
+    end.y = cells[i][1] + directions[i][1] * 0.5;
+    end.z = cells[i][2] + directions[i][2] * 0.5;
+    marker.points.push_back(start);
+    marker.points.push_back(end);
+    markers.markers.push_back(marker);
+  }
+  return markers;
+}
+
 template <typename VisType>
 void FrontierBasedExploration3D::publishVisCells(
   const std::string& name, 
@@ -202,9 +265,32 @@ void FrontierBasedExploration3D::publishVisCells(
     c.r = color[0];
     c.g = color[1];
     c.b = color[2];
-    c.a = 0.75;
+    c.a = vis_alpha_;
     auto markers = toMarkers(vis_type, cell_marker_, c);
     pubs_[name].publish(markers);
+  }
+}
+
+template <typename VisTypeU, typename VisTypeV>
+void FrontierBasedExploration3D::publishVisCellsWithDirections(
+  const std::string& name, 
+  const VisTypeU& vis_type,
+  const VisTypeV& vis_dir_type,
+  const Eigen::Vector3f& color) 
+{
+  if (pubs_[name]) {
+    std_msgs::ColorRGBA c;
+    c.r = color[0];
+    c.g = color[1];
+    c.b = color[2];
+    c.a = 0.75;
+    auto cell_markers = toMarkers(vis_type, cell_marker_, c);
+    auto arrow_markers = toArrowMarkers(vis_type, vis_dir_type, arrow_marker_, c);
+    for (auto& am : arrow_markers.markers) {
+      am.id += cell_markers.markers.size();
+    }
+    pubs_[name].publish(cell_markers);
+    pubs_[name].publish(arrow_markers);
   }
 }
 
@@ -252,7 +338,7 @@ void FrontierBasedExploration3D::findFrontiers() {
       bool is_frontier = false;
       vector<OcTreeKey> neighbor_keys;
       int un_count = 0;
-      for (int i = 0; i < octomap_utils::N_NEIGHBORS; ++i) {
+      for (int i = 0; i < utils::N_NEIGHBORS; ++i) {
         auto n_key = OcTreeKey(
           key.k[0] + neighbor_table_(i, 0),
           key.k[1] + neighbor_table_(i, 1),
@@ -310,24 +396,46 @@ void FrontierBasedExploration3D::findVoids() {
 
 void FrontierBasedExploration3D::findFrontierClusters()
 {
-  ros::WallTime start_time = ros::WallTime::now();
-  for (auto& f : frontiers_) {
-    if (!frontiers_search_[f.first]) {
-      f_clusters_.push_back(FrontierCluster(f.first, oc_tree_->keyToCoord(f.first)));
-      auto nn = f.second;
-      frontiers_search_[f.first] = true;
-      neighborRecursion(nn); // one f_cluster is finished
-      f_clusters_.back().center_ /= f_clusters_.back().frontiers_.size(); // find the f_cluster center
+  double s_roll, s_pitch, s_yaw;
+  tf::Matrix3x3(sensor_tf_.getRotation()).getRPY(s_roll, s_pitch, s_yaw);
+  for (auto& c : f_clusters_) { // Frontier is searched if its within sensor range
+    // Find plane normal to points of the cluster
+    auto c_in_map = tf::Vector3(c.center_.x(), c.center_.y(), c.center_.z());
+    auto c_in_sensor = sensor_tf_.inverse() * c_in_map;
+    if (fabsf(atan2(c_in_sensor.y(), c_in_sensor.x())) <= sensor_horizontal_fov_) {
+      auto dist = sqrt(
+        c_in_sensor.x() * c_in_sensor.x() + 
+        c_in_sensor.y() * c_in_sensor.y() +
+        c_in_sensor.z() * c_in_sensor.z());
+      if (dist <= frontier_exp_range_) {
+        c.searched_ = true;  
+      }  
     }
   }
 
-  // Remove clusters if searched or smaller than minimum cluster size
+  ros::WallTime start_time = ros::WallTime::now();
+  for (auto& f : frontiers_) {
+    if (!frontiers_search_[f.first]) {
+      f_clusters_.push_back(FrontierCluster());
+      auto nn = f.second;
+      frontiers_search_[f.first] = true;
+      neighborRecursion(nn); // one f_cluster is finished
+      if (f_clusters_.back().frontiers_.size() < min_f_cluster_size_) {
+        f_clusters_.pop_back();
+        continue;
+      }
+      f_clusters_.back().setup();
+    }
+  }
+
+  // Remove clusters if already searched
   auto end = std::remove_if(f_clusters_.begin(), f_clusters_.end(),
     [&](const FrontierCluster& c) {
-      return c.searched_ || c.frontiers_.size() < min_f_cluster_size_;
+      return c.searched_;
     });
   f_clusters_.erase(end, f_clusters_.end());
-  ROS_INFO_STREAM("Clusters size:" << f_clusters_.size());
+
+  // Find overlapping clusters and unionize them 
 
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
@@ -355,8 +463,8 @@ void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors)
     if (frontiers_.find(n) != frontiers_.end() && // if neighbor is also a frontier
         !frontiers_search_[n]) // not already searched
     { 
-      f_clusters_.back().frontiers_.push_back(n);
-      f_clusters_.back().center_ += oc_tree_->keyToCoord(n);
+      auto coord = utils::toEigen(oc_tree_->keyToCoord(n));
+      f_clusters_.back().frontiers_.push_back(coord);
       auto nn = frontiers_[n]; // get second neighbors
       frontiers_search_[n] = true;
       neighborRecursion(nn); // do it again

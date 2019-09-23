@@ -20,7 +20,7 @@
 #include <fstream>
 #include <Eigen/Dense>
 
-#include "mavros_navigation/octomap_utils.h"
+#include "mavros_navigation/utils.h"
 
 #include <CGAL/min_max_n.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
@@ -53,16 +53,18 @@ namespace mavros_navigation
 {
 
 struct FrontierCluster {
-  FrontierCluster(
-		const OcTreeKey& centerKey,
-  	const octomap::point3d& center) :
-  	center_(center)
-  {
-		frontiers_.push_back(centerKey);
-  }
+  FrontierCluster() {}
 
-  vector<OcTreeKey> frontiers_; // All the octocells in the cluster
-  octomap::point3d center_; // Cluster center
+	void setup() {
+		Eigen::Vector3d fit_line;
+		utils::best_line_2d_from_points(frontiers_, center_, fit_line);
+		normal_[0] = -fit_line[1];
+		normal_[1] = fit_line[0];
+	}
+
+  vector<Eigen::Vector3d> frontiers_; // All the octocells in the cluster
+  Eigen::Vector3d center_; // Cluster center
+	Eigen::Vector3d normal_;
 	bool searched_ = {false}; // Whether this cluster has been navigated to or not
 };
 
@@ -87,10 +89,21 @@ private:
 	  const std::vector<Point>& cells,
 	  visualization_msgs::Marker& marker,
 	  const std_msgs::ColorRGBA& color);
+	visualization_msgs::MarkerArray toArrowMarkers(
+		const std::vector<Eigen::Vector3d>& cells,
+		const std::vector<Eigen::Vector3d>& directions,
+		visualization_msgs::Marker& marker,
+		const std_msgs::ColorRGBA& color);
 	template <typename VisType>
 	void publishVisCells(
 	  const std::string& name, 
 	  const VisType& vis_type,
+	  const Eigen::Vector3f& color);
+	template <typename VisTypeU, typename VisTypeV>
+	void publishVisCellsWithDirections(
+	  const std::string& name, 
+	  const VisTypeU& vis_type,
+		const VisTypeV& vis_dir_type,
 	  const Eigen::Vector3f& color);
 	template <typename VisType>
 	void publishVisPoints(
@@ -124,6 +137,7 @@ private:
 	};
 	visualization_msgs::Marker cell_marker_; // base marker for cells
 	visualization_msgs::Marker point_marker_; // base marker for points
+	visualization_msgs::Marker arrow_marker_; // base marker for arrows
 	ros::Subscriber planning_scene_sub_; // moveit planning scene subscriber
 	// ros params
 	std::string frame_id_; // octomap frame id
@@ -136,6 +150,8 @@ private:
 	int min_un_neighbor_count_ = {1}; // minimum number of unknown neighbors for frontier
 	int min_f_cluster_size_; // minimum number of elements in cluster frontier
 	double sensor_max_range_; // maximum sensor range
+	double frontier_exp_range_; // range within which a frontier is considered to be explored
+	double sensor_horizontal_fov_; // field of view of sensor in horizontal
 	double vis_alpha_; // opacity of visualization markers
 	double vis_duration_; // duration of visualization markers
 
