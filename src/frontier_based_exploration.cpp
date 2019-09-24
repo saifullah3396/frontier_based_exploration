@@ -10,15 +10,15 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   // initialize parameters
   std::string planning_scene_topic, sensor_topic;
   p_nh.getParam("frame_id", frame_id_);
-  p_nh.getParam("sensor_frame_id", sensor_frame_id_);
+  p_nh.getParam("base_frame_id", base_frame_id_);
   p_nh.getParam("debug", debug_);
-  p_nh.getParam("octomap_resolution", octomap_resolution_);
+  p_nh.getParam("resolution", octomap_resolution_);
   p_nh.getParam("planning_scene_topic", planning_scene_topic);
   p_nh.getParam("frontier_search_min_z", frontier_search_min_z_);
   p_nh.getParam("frontier_search_max_z", frontier_search_max_z_);
   p_nh.getParam("min_un_neighbor_count", min_un_neighbor_count_);
   p_nh.getParam("min_f_cluster_size", min_f_cluster_size_);
-  p_nh.getParam("sensor_max_range", sensor_max_range_);
+  p_nh.getParam("sensor_model/max_range", sensor_max_range_);
   p_nh.getParam("frontier_exp_range", frontier_exp_range_);
   p_nh.getParam("sensor_horizontal_fov", sensor_horizontal_fov_);
   p_nh.getParam("vis_alpha", vis_alpha_);
@@ -29,17 +29,14 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
     bool publish = false;
     p_nh.getParam(publisher_names_[i], publish);
     if (publish) {
-      if (publisher_names_[i] == "vis_octree")
-        pubs_[publisher_names_[i]] = nh_.advertise<octomap_msgs::Octomap>(publisher_names_[i], 10);
-      else 
-        pubs_[publisher_names_[i]] = nh_.advertise<visualization_msgs::MarkerArray>(publisher_names_[i], 10);
+      pubs_[publisher_names_[i]] = nh_.advertise<visualization_msgs::MarkerArray>(publisher_names_[i], 10);
     }
   }
 
   // initialize subscribers
-  oc_tree_ = new OcTree(octomap_resolution_);
+  oc_tree_ = this->m_octree;
   oc_tree_->enableChangeDetection(true);
-  planning_scene_sub_ = nh_.subscribe<moveit_msgs::PlanningScene>(planning_scene_topic, 10, &FrontierBasedExploration3D::planningSceneCb, this);
+  //planning_scene_sub_ = nh_.subscribe<moveit_msgs::PlanningScene>(planning_scene_topic, 10, &FrontierBasedExploration3D::planningSceneCb, this);
 
   // create neighbor
   neighbor_table_ = utils::createNeighborLUT();
@@ -70,77 +67,11 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
 
 FrontierBasedExploration3D::~FrontierBasedExploration3D() 
 {
-  if (oc_tree_) {
-    delete oc_tree_;
-    oc_tree_ = nullptr;
-  }
 }
 
-void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningSceneConstPtr& planning_scene) {
-  // get the OcTree from the incoming moveit planning scene
-  const auto& octomap = planning_scene->world.octomap.octomap;
-  if (octomap.data.size() != 0) {
-    octomap::OcTree* new_oc_tree_ = 
-      boost::static_pointer_cast<OcTree>(octomap_msgs::fullMsgToMap(planning_scene->world.octomap.octomap));
-
-    // update octree from incoming octomap
-    for (auto iter = new_oc_tree_->begin(); iter != oc_tree_->end_leafs(); ++iter) { // find changed nodes between previous and new tree
-      auto node = new_oc_tree_->search(iter.getKey());
-      if (iter.getCoordinate().z() > frontier_search_min_z_ && iter.getCoordinate().z() < frontier_search_max_z_)
-        oc_tree_->updateNode(iter.getCoordinate(), new_oc_tree_->isNodeOccupied(node));
-    }
-    oc_tree_->updateInnerOccupancy();
-
-    if (sensor_frame_id_ == "") {
-      ROS_ERROR("sensor_frame_id_ not set! See if sensor information callback is fine.");
-      return;
-    }
-
-    try {
-      // sensor frame to map frame
-      tf_listener.lookupTransform(frame_id_, sensor_frame_id_, ros::Time(0), sensor_tf_);
-    } catch (tf::TransformException ex) {
-      ROS_ERROR("%s",ex.what());
-      ros::Duration(1.0).sleep();
-    }
-
-    // update exploration
-    refreshFrontiers();
-    findFrontiers();
-    //findVoids();
-    findFrontierClusters();
-    //findVoidClusters();
-
-    // publish visuals 
-    if (debug_) {
-      publishOctree();
-      //publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
-      //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
-      vector<Eigen::Vector3d> f_cluster_centers, f_cluster_normals;
-      for (const auto& cluster: f_clusters_) {
-        Eigen::Vector3f color(
-          (float)rand() / (float)(RAND_MAX), 
-          (float)rand() / (float)(RAND_MAX),
-          (float)rand() / (float)(RAND_MAX));
-        publishVisCells("vis_f_clusters", cluster.frontiers_, color);
-        f_cluster_centers.push_back(cluster.center_);
-        f_cluster_normals.push_back(cluster.normal_);
-      }
-      publishVisCellsWithDirections("vis_f_clusters", f_cluster_centers, f_cluster_normals, Eigen::Vector3f(0.0, 0.0, 1.0));
-      //publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
-      //publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
-    }
-  }
-}
-
-void FrontierBasedExploration3D::publishOctree()
-{
-  if (pubs_["vis_octree"]) {
-    octomap_msgs::Octomap msg;
-    msg.header.frame_id = "map";
-    octomap_msgs::fullMapToMsg(*oc_tree_, msg);
-    pubs_["vis_octree"].publish(msg);
-  }
+void FrontierBasedExploration3D::insertScan(const tf::Point & sensorOrigin, const PCLPointCloud & ground, const PCLPointCloud & nonground) {
+  OctomapServer::insertScan(sensorOrigin, ground, nonground);
+  update();
 }
 
 visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
@@ -313,6 +244,47 @@ void FrontierBasedExploration3D::publishVisPoints(
   }
 }
 
+void FrontierBasedExploration3D::update() {
+  if (base_frame_id_ == "") {
+    ROS_ERROR("base_frame_id_ not set! See if sensor information callback is fine.");
+    return;
+  }
+
+  try {
+    // sensor frame to map frame
+    tf_listener.lookupTransform(frame_id_, base_frame_id_, ros::Time(0), sensor_tf_);
+  } catch (tf::TransformException ex) {
+    ROS_ERROR("%s",ex.what());
+    ros::Duration(1.0).sleep();
+  }
+
+  // update exploration
+  refreshFrontiers();
+  findFrontiers();
+  //findVoids();
+  findFrontierClusters();
+  //findVoidClusters();
+
+  // publish visuals 
+  if (debug_) {
+    //publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
+    //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
+    vector<Eigen::Vector3d> f_cluster_centers, f_cluster_normals;
+    for (const auto& cluster: f_clusters_) {
+      Eigen::Vector3f color(
+        (float)rand() / (float)(RAND_MAX), 
+        (float)rand() / (float)(RAND_MAX),
+        (float)rand() / (float)(RAND_MAX));
+      publishVisCells("vis_f_clusters", cluster.frontiers_, color);
+      f_cluster_centers.push_back(cluster.center_);
+      f_cluster_normals.push_back(cluster.normal_);
+    }
+    publishVisCellsWithDirections("vis_f_clusters", f_cluster_centers, f_cluster_normals, Eigen::Vector3f(0.0, 0.0, 1.0));
+    //publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
+    //publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
+  }
+}
+
 void FrontierBasedExploration3D::findFrontiers() {
   ros::WallTime start_time = ros::WallTime::now();
   frontiers_.clear();
@@ -371,8 +343,8 @@ void FrontierBasedExploration3D::findFrontiers() {
       }
     }
   }
-  //hull_points_.insert(hull_points_.begin(), input_points.begin(), input_points.end());
   oc_tree_->resetChangeDetection();
+  //hull_points_.insert(hull_points_.begin(), input_points.begin(), input_points.end());
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_INFO_STREAM("findFrontiers() used total " << total_time << " sec");
 }

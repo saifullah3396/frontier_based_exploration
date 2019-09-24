@@ -3,6 +3,7 @@
 #include <moveit_msgs/PlanningScene.h>
 #include <message_filters/subscriber.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <octomap_server/OctomapServer.h>
 #include <octomap_msgs/Octomap.h>
 #include <octomap_msgs/GetOctomap.h>
 #include <octomap_msgs/BoundingBoxQuery.h>
@@ -79,7 +80,7 @@ struct FrontierCluster {
 	bool searched_ = {false}; // Whether this cluster has been navigated to or not
 };
 
-class FrontierBasedExploration3D
+class FrontierBasedExploration3D : public octomap_server::OctomapServer
 {
 public:
 	FrontierBasedExploration3D();	
@@ -122,10 +123,11 @@ private:
 	  const VisType& vis_type,
 	  const Eigen::Vector3f& color);
 
-	// subscriber functions
-	void planningSceneCb(const moveit_msgs::PlanningSceneConstPtr& planning_scene);
+	// derived from octomap server
+	void insertScan(const tf::Point& sensorOrigin, const PCLPointCloud& ground, const PCLPointCloud& nonground);
 
 	// fbe3d functions
+	void update();
 	void findFrontiers();
 	void refreshFrontiers();
 	void findVoids();
@@ -150,10 +152,11 @@ private:
 	visualization_msgs::Marker cell_marker_; // base marker for cells
 	visualization_msgs::Marker point_marker_; // base marker for points
 	visualization_msgs::Marker arrow_marker_; // base marker for arrows
+	ros::Subscriber octomap_sub_; // octomap subscriber
 	ros::Subscriber planning_scene_sub_; // moveit planning scene subscriber
 	// ros params
 	std::string frame_id_; // octomap frame id
-	std::string sensor_frame_id_; // sensor frame id
+	std::string base_frame_id_; // sensor frame id
 	tf::StampedTransform sensor_tf_; // sensor frame tf
 	bool debug_; // whether to debug or not
 	double octomap_resolution_; // octomap resolution
