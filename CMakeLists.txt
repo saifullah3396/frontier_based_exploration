@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   std_srvs
   octomap_ros
+  octomap_server
   octomap_msgs
   dynamic_reconfigure
   nodelet  
