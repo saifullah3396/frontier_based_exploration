@@ -147,7 +147,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
-  marker.color.a = 0.75;
+  marker.color.a = vis_alpha_;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
@@ -169,7 +169,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
-  marker.color.a = 0.75;
+  marker.color.a = vis_alpha_;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
@@ -190,7 +190,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
-  marker.color.a = 0.75;
+  marker.color.a = vis_alpha_;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
@@ -211,7 +211,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
-  marker.color.a = 0.75;
+  marker.color.a = vis_alpha_;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
@@ -233,7 +233,7 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toArrowMarkers(
   const std_msgs::ColorRGBA& color) 
 {
   marker.color = color;
-  marker.color.a = 0.75;
+  marker.color.a = vis_alpha_;
   int id = 0;
   visualization_msgs::MarkerArray markers;
   for (int i = 0; i < cells.size(); ++i) {
@@ -283,7 +283,7 @@ void FrontierBasedExploration3D::publishVisCellsWithDirections(
     c.r = color[0];
     c.g = color[1];
     c.b = color[2];
-    c.a = 0.75;
+    c.a = vis_alpha_;
     auto cell_markers = toMarkers(vis_type, cell_marker_, c);
     auto arrow_markers = toArrowMarkers(vis_type, vis_dir_type, arrow_marker_, c);
     for (auto& am : arrow_markers.markers) {
@@ -305,7 +305,7 @@ void FrontierBasedExploration3D::publishVisPoints(
     c.r = color[0];
     c.g = color[1];
     c.b = color[2];
-    c.a = 0.75;
+    c.a = vis_alpha_;
     auto markers = toMarkers(vis_type, point_marker_, c);
     pubs_[name].publish(markers);
   }
@@ -396,6 +396,7 @@ void FrontierBasedExploration3D::findVoids() {
 
 void FrontierBasedExploration3D::findFrontierClusters()
 {
+  // Mark clusters as searched if thier are in robot field of view and sensor range
   double s_roll, s_pitch, s_yaw;
   tf::Matrix3x3(sensor_tf_.getRotation()).getRPY(s_roll, s_pitch, s_yaw);
   for (auto& c : f_clusters_) { // Frontier is searched if its within sensor range
