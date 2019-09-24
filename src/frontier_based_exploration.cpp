@@ -396,24 +396,7 @@ void FrontierBasedExploration3D::findVoids() {
 
 void FrontierBasedExploration3D::findFrontierClusters()
 {
-  // Mark clusters as searched if thier are in robot field of view and sensor range
-  double s_roll, s_pitch, s_yaw;
-  tf::Matrix3x3(sensor_tf_.getRotation()).getRPY(s_roll, s_pitch, s_yaw);
-  for (auto& c : f_clusters_) { // Frontier is searched if its within sensor range
-    // Find plane normal to points of the cluster
-    auto c_in_map = tf::Vector3(c.center_.x(), c.center_.y(), c.center_.z());
-    auto c_in_sensor = sensor_tf_.inverse() * c_in_map;
-    if (fabsf(atan2(c_in_sensor.y(), c_in_sensor.x())) <= sensor_horizontal_fov_) {
-      auto dist = sqrt(
-        c_in_sensor.x() * c_in_sensor.x() + 
-        c_in_sensor.y() * c_in_sensor.y() +
-        c_in_sensor.z() * c_in_sensor.z());
-      if (dist <= frontier_exp_range_) {
-        c.searched_ = true;  
-      }  
-    }
-  }
-
+  refreshFrontiers();
   ros::WallTime start_time = ros::WallTime::now();
   for (auto& f : frontiers_) {
     if (!frontiers_search_[f.first]) {
@@ -429,17 +412,54 @@ void FrontierBasedExploration3D::findFrontierClusters()
     }
   }
 
+  double total_time = (ros::WallTime::now() - start_time).toSec();
+  ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
+}
+
+void FrontierBasedExploration3D::refreshFrontiers()
+{
+  // Mark clusters as searched if they are in robot field of view and sensor range
+  // and have neighbors updated
+  double s_roll, s_pitch, s_yaw;
+  tf::Matrix3x3(sensor_tf_.getRotation()).getRPY(s_roll, s_pitch, s_yaw);
+  for (auto& c : f_clusters_) {
+    // Frontier center in map frame
+    auto c_in_map = tf::Vector3(c.center_.x(), c.center_.y(), c.center_.z());
+    // Frontier center in sensor frame
+    auto c_in_sensor = sensor_tf_.inverse() * c_in_map;
+    if (fabsf(atan2(c_in_sensor.y(), c_in_sensor.x())) <= sensor_horizontal_fov_) {
+      c.searched_ = true;
+      // Frontier center is within field of view
+      auto dist = sqrt(
+        c_in_sensor.x() * c_in_sensor.x() + 
+        c_in_sensor.y() * c_in_sensor.y() +
+        c_in_sensor.z() * c_in_sensor.z());
+      if (dist <= frontier_exp_range_) {
+        // Frontier center is within sensor range
+        auto center_key = 
+          oc_tree_->coordToKey(
+            octomap::point3d(c.center_[0], c.center_[1], c.center_[2]));
+        // Check all neighbors of center to see if a surrounding space is updated
+        for (int i = 0; i < utils::N_NEIGHBORS; ++i) {
+          auto n_key = OcTreeKey(
+            center_key.k[0] + neighbor_table_(i, 0),
+            center_key.k[1] + neighbor_table_(i, 1),
+            center_key.k[2] + neighbor_table_(i, 2));
+          auto n_node = oc_tree_->search(n_key);
+          if (!n_node) { // If any neighbor is unknown
+            c.searched_ = false;
+          }
+        }
+      }  
+    }
+  }
+
   // Remove clusters if already searched
   auto end = std::remove_if(f_clusters_.begin(), f_clusters_.end(),
     [&](const FrontierCluster& c) {
       return c.searched_;
     });
   f_clusters_.erase(end, f_clusters_.end());
-
-  // Find overlapping clusters and unionize them 
-
-  double total_time = (ros::WallTime::now() - start_time).toSec();
-  ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::findVoidClusters()

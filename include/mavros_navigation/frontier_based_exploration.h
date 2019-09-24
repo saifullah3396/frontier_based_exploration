@@ -127,6 +127,7 @@ private:
 
 	// fbe3d functions
 	void findFrontiers();
+	void refreshFrontiers();
 	void findVoids();
 	void findFrontierClusters();
 	void findVoidClusters();
