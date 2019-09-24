@@ -89,6 +89,7 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
       if (iter.getCoordinate().z() > frontier_search_min_z_ && iter.getCoordinate().z() < frontier_search_max_z_)
         oc_tree_->updateNode(iter.getCoordinate(), new_oc_tree_->isNodeOccupied(node));
     }
+    oc_tree_->updateInnerOccupancy();
 
     if (sensor_frame_id_ == "") {
       ROS_ERROR("sensor_frame_id_ not set! See if sensor information callback is fine.");
@@ -104,6 +105,7 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
     }
 
     // update exploration
+    refreshFrontiers();
     findFrontiers();
     //findVoids();
     findFrontierClusters();
@@ -112,7 +114,7 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
     // publish visuals 
     if (debug_) {
       publishOctree();
-      publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
+      //publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
       //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
       vector<Eigen::Vector3d> f_cluster_centers, f_cluster_normals;
       for (const auto& cluster: f_clusters_) {
@@ -396,7 +398,6 @@ void FrontierBasedExploration3D::findVoids() {
 
 void FrontierBasedExploration3D::findFrontierClusters()
 {
-  refreshFrontiers();
   ros::WallTime start_time = ros::WallTime::now();
   for (auto& f : frontiers_) {
     if (!frontiers_search_[f.first]) {
@@ -428,13 +429,13 @@ void FrontierBasedExploration3D::refreshFrontiers()
     // Frontier center in sensor frame
     auto c_in_sensor = sensor_tf_.inverse() * c_in_map;
     if (fabsf(atan2(c_in_sensor.y(), c_in_sensor.x())) <= sensor_horizontal_fov_) {
-      c.searched_ = true;
       // Frontier center is within field of view
       auto dist = sqrt(
         c_in_sensor.x() * c_in_sensor.x() + 
         c_in_sensor.y() * c_in_sensor.y() +
         c_in_sensor.z() * c_in_sensor.z());
       if (dist <= frontier_exp_range_) {
+        c.searched_ = true;
         // Frontier center is within sensor range
         auto center_key = 
           oc_tree_->coordToKey(
@@ -450,7 +451,7 @@ void FrontierBasedExploration3D::refreshFrontiers()
             c.searched_ = false;
           }
         }
-      }  
+      }
     }
   }
 
