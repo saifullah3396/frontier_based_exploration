@@ -120,7 +120,7 @@ void FrontierBasedExploration3D::planningSceneCb(const moveit_msgs::PlanningScen
           (float)rand() / (float)(RAND_MAX), 
           (float)rand() / (float)(RAND_MAX),
           (float)rand() / (float)(RAND_MAX));
-        //publishVisCells("vis_f_clusters", cluster.frontiers_, color);
+        publishVisCells("vis_f_clusters", cluster.frontiers_, color);
         f_cluster_centers.push_back(cluster.center_);
         f_cluster_normals.push_back(cluster.normal_);
       }

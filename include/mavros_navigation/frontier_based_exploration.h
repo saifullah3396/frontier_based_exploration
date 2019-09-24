@@ -57,7 +57,7 @@ struct FrontierCluster {
 
 	void setup() {
 		Eigen::Vector3d fit_line;
-		utils::best_line_2d_from_points(frontiers_, center_, fit_line);
+		utils::best_line_from_points(frontiers_, center_, fit_line);
 		normal_[0] = -fit_line[1];
 		normal_[1] = fit_line[0];
 	}
