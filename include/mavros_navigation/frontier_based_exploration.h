@@ -60,6 +60,17 @@ struct FrontierCluster {
 		utils::best_line_from_points(frontiers_, center_, fit_line);
 		normal_[0] = -fit_line[1];
 		normal_[1] = fit_line[0];
+		double min_dist = 1000;
+		// assign closest frontier to center as center
+		Eigen::Vector3d* best_f;
+		for (auto& f: frontiers_) {
+			auto dist = (f - center_).norm();
+			if (dist <= min_dist) {
+				min_dist = dist;
+				best_f = &f;
+			}
+		}
+		center_ = *best_f;
 	}
 
   vector<Eigen::Vector3d> frontiers_; // All the octocells in the cluster
