@@ -139,8 +139,9 @@ private:
 	ros::NodeHandle nh_; // ros node handle
 	tf::TransformListener tf_listener; // tf listener
 
-	map<std::string, ros::Publisher> pubs_; // ros publisher
-	vector<std::string> publisher_names_ { // names of the publishers 
+	ros::Publisher goal_frontier_pub_;
+	map<std::string, ros::Publisher> vis_pubs_; // ros publishers for visualization
+	vector<std::string> vis_pub_names_ { // names of the publishers 
 		"vis_octree",
 		"vis_frontiers",
 		"vis_voids",

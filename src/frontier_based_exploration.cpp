@@ -25,18 +25,18 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   p_nh.getParam("vis_duration", vis_duration_);
 
   // initialize publishers
-  for (int i = 0; i < publisher_names_.size(); ++i) { 
+  goal_frontier_pub_ = nh_.advertise<geometry_msgs::PointStamped>("goal_frontier", 10);
+  for (int i = 0; i < vis_pub_names_.size(); ++i) { 
     bool publish = false;
-    p_nh.getParam(publisher_names_[i], publish);
+    p_nh.getParam(vis_pub_names_[i], publish);
     if (publish) {
-      pubs_[publisher_names_[i]] = nh_.advertise<visualization_msgs::MarkerArray>(publisher_names_[i], 10);
+      vis_pubs_[vis_pub_names_[i]] = nh_.advertise<visualization_msgs::MarkerArray>(vis_pub_names_[i], 10);
     }
   }
 
   // initialize subscribers
   oc_tree_ = this->m_octree;
   oc_tree_->enableChangeDetection(true);
-  //planning_scene_sub_ = nh_.subscribe<moveit_msgs::PlanningScene>(planning_scene_topic, 10, &FrontierBasedExploration3D::planningSceneCb, this);
 
   // create neighbor
   neighbor_table_ = utils::createNeighborLUT();
@@ -193,14 +193,14 @@ void FrontierBasedExploration3D::publishVisCells(
   const VisType& vis_type,
   const Eigen::Vector3f& color) 
 {
-  if (pubs_[name]) {
+  if (vis_pubs_[name]) {
     std_msgs::ColorRGBA c;
     c.r = color[0];
     c.g = color[1];
     c.b = color[2];
     c.a = vis_alpha_;
     auto markers = toMarkers(vis_type, cell_marker_, c);
-    pubs_[name].publish(markers);
+    vis_pubs_[name].publish(markers);
   }
 }
 
@@ -211,7 +211,7 @@ void FrontierBasedExploration3D::publishVisCellsWithDirections(
   const VisTypeV& vis_dir_type,
   const Eigen::Vector3f& color) 
 {
-  if (pubs_[name]) {
+  if (vis_pubs_[name]) {
     std_msgs::ColorRGBA c;
     c.r = color[0];
     c.g = color[1];
@@ -222,8 +222,8 @@ void FrontierBasedExploration3D::publishVisCellsWithDirections(
     for (auto& am : arrow_markers.markers) {
       am.id += cell_markers.markers.size();
     }
-    pubs_[name].publish(cell_markers);
-    pubs_[name].publish(arrow_markers);
+    vis_pubs_[name].publish(cell_markers);
+    vis_pubs_[name].publish(arrow_markers);
   }
 }
 
@@ -233,14 +233,14 @@ void FrontierBasedExploration3D::publishVisPoints(
   const VisType& vis_type,
   const Eigen::Vector3f& color) 
 {
-  if (pubs_[name]) {
+  if (vis_pubs_[name]) {
     std_msgs::ColorRGBA c;
     c.r = color[0];
     c.g = color[1];
     c.b = color[2];
     c.a = vis_alpha_;
     auto markers = toMarkers(vis_type, point_marker_, c);
-    pubs_[name].publish(markers);
+    vis_pubs_[name].publish(markers);
   }
 }
 
@@ -267,7 +267,7 @@ void FrontierBasedExploration3D::update() {
 
   // publish visuals 
   if (debug_) {
-    //publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
+    publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
     //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
     vector<Eigen::Vector3d> f_cluster_centers, f_cluster_normals;
     for (const auto& cluster: f_clusters_) {
@@ -346,7 +346,7 @@ void FrontierBasedExploration3D::findFrontiers() {
   oc_tree_->resetChangeDetection();
   //hull_points_.insert(hull_points_.begin(), input_points.begin(), input_points.end());
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  ROS_INFO_STREAM("findFrontiers() used total " << total_time << " sec");
+  ROS_DEBUG_STREAM("findFrontiers() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::findVoids() {
@@ -365,7 +365,7 @@ void FrontierBasedExploration3D::findVoids() {
       voids_.push_back(coord);
   }
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  ROS_INFO_STREAM("findVoids() used total " << total_time << " sec");
+  ROS_DEBUG_STREAM("findVoids() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::findFrontierClusters()
@@ -386,7 +386,7 @@ void FrontierBasedExploration3D::findFrontierClusters()
   }
 
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
+  ROS_DEBUG_STREAM("findFrontierClusters() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::refreshFrontiers()
@@ -449,7 +449,7 @@ void FrontierBasedExploration3D::findVoidClusters()
     std::cout << "\t(" << mean[0] << "," << mean[1] << ")" << std::endl;
   }
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  ROS_INFO_STREAM("findVoidClusters() used total " << total_time << " sec");
+  ROS_DEBUG_STREAM("findVoidClusters() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors) {
