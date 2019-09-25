@@ -4,8 +4,6 @@
 namespace mavros_navigation 
 {
 
-FrontierCluster::FrontierCluster() {}
-
 void FrontierCluster::addFrontier(Frontier* frontier) 
 {
   frontier->cluster_ = this;

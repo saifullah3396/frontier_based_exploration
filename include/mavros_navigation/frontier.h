@@ -14,6 +14,7 @@ struct Frontier {
 		const octomap::point3d& coord,
 		const std::vector<OcTreeKey>& neighbors, 
 		const bool& searched);
+	~Frontier() {}
 
 	octomap::point3d coord_;
 	std::vector<OcTreeKey> neighbors_;

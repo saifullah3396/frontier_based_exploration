@@ -13,6 +13,7 @@ class FrontierCluster {
 public:
   // Constructor
   FrontierCluster() {}
+  ~FrontierCluster() {}
 
   // Getters
   const size_t size() const { return frontiers_.size(); }
