@@ -21,8 +21,6 @@
 #include <fstream>
 #include <Eigen/Dense>
 
-#include "mavros_navigation/utils.h"
-
 #include <CGAL/min_max_n.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Polyhedron_3.h>
@@ -36,7 +34,8 @@
 #include <CGAL/algorithm.h>
 #include <CGAL/Side_of_triangle_mesh.h>
 
-#include "mavros_navigation/dkm/dkm.hpp"
+#include <mavros_navigation/utils.h>
+#include <mavros_navigation/dkm/dkm.hpp>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel     K;
 typedef K::Point_3                                              Point_3;
@@ -53,38 +52,8 @@ using octomap_msgs::Octomap;
 namespace mavros_navigation
 {
 
-struct Frontier {
-	vector<OcTreeKey> neighbors;
-	bool searched = {false};
-	bool clustered = {false};
-};
-
-struct FrontierCluster {
-  FrontierCluster() {}
-
-	void setup() {
-		Eigen::Vector3d fit_line;
-		utils::best_line_from_points(frontiers_, center_, fit_line);
-		normal_[0] = -fit_line[1];
-		normal_[1] = fit_line[0];
-		double min_dist = 1000;
-		// assign closest frontier to center as center
-		Eigen::Vector3d* best_f;
-		for (auto& f: frontiers_) {
-			auto dist = (f - center_).norm();
-			if (dist <= min_dist) {
-				min_dist = dist;
-				best_f = &f;
-			}
-		}
-		center_ = *best_f;
-	}
-
-  vector<Eigen::Vector3d> frontiers_; // All the octocells in the cluster
-  Eigen::Vector3d center_; // Cluster center
-	Eigen::Vector3d normal_;
-	bool searched_ = {false}; // Whether this cluster has been navigated to or not
-};
+struct Frontier;
+class FrontierCluster;
 
 class FrontierBasedExploration3D : public octomap_server::OctomapServer
 {
@@ -93,7 +62,7 @@ public:
 	~FrontierBasedExploration3D();
 
 private:
-	typedef std::tr1::unordered_map<OcTreeKey, Frontier, OcTreeKey::KeyHash> FrontierMap;
+	typedef std::tr1::unordered_map<OcTreeKey, Frontier*, OcTreeKey::KeyHash> FrontierMap;
 
 	// publisher functions
 	void publishOctree();
@@ -138,7 +107,7 @@ private:
 	void findVoids();
 	void findFrontierClusters();
 	void findVoidClusters();
-	void neighborRecursion(vector<OcTreeKey>& neighbors);
+	void neighborRecursion(vector<OcTreeKey>& neighbors, FrontierCluster* cluster);
 
 	// ros
 	ros::NodeHandle nh_; // ros node handle
@@ -179,7 +148,8 @@ private:
 	// fbe3d
 	octomap::OcTree* oc_tree_; // main octree
 	FrontierMap frontiers_; // detected frontiers
-	vector<FrontierCluster> f_clusters_; // detected fronter clusters
+	FrontierMap prev_frontiers_; // detected frontiers in last cycle
+	vector<FrontierCluster*> f_clusters_; // detected fronter clusters
 	vector<vector<octomap::point3d>> v_clusters_; // detected void clusters
 	vector<octomap::point3d> voids_; // detected voids
 	Eigen::Array<int, Eigen::Dynamic, 3> neighbor_table_; // lookup table for searching close neighbors
