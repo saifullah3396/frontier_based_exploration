@@ -8,6 +8,10 @@ namespace mavros_navigation
 {
 
 class Frontier;
+class FrontierCluster;
+
+using FrontierPtr = Frontier*;
+using FrontierClusterPtr = FrontierCluster*;
 
 class FrontierCluster {
 public:
@@ -16,21 +20,21 @@ public:
   ~FrontierCluster() {}
 
   // Getters
-  const size_t size() const { return frontiers_.size(); }
-  const std::vector<Frontier*> getFrontiers() const { return frontiers_; }
-  const Frontier* getCenter() const { return center_f; }
-	const bool& getSearched() const {	return searched_; }
+  size_t size() const { return frontiers_.size(); }
+  std::vector<FrontierPtr> getFrontiers() const { return frontiers_; }
+  FrontierPtr getCenter() const { return center_f; }
+	bool getSearched() const {	return searched_; }
 
   // Setters
 	void setSearched(const bool& searched) { searched_ = searched; }
   
-	void addFrontier(Frontier* frontier); // Adds a frontier to cluster
-	void join(FrontierCluster* other); // unionize two clusters
+	void addFrontier(const FrontierPtr& frontier); // Adds a frontier to cluster
+	void join(const FrontierClusterPtr& other); // unionize two clusters
 	void setup(); // setup center and cluster normal
 
 private:
-  std::vector<Frontier*> frontiers_; // All the octocells in the cluster
-  Frontier* center_f; // Cluster center
+  std::vector<FrontierPtr> frontiers_; // All the octocells in the cluster
+  FrontierPtr center_f; // Cluster center
 	Eigen::Vector3d normal_;
 	bool searched_ = {false}; // Whether this cluster has been navigated to or not
 };

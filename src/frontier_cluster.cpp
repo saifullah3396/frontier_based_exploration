@@ -4,15 +4,18 @@
 namespace mavros_navigation 
 {
 
-void FrontierCluster::addFrontier(Frontier* frontier) 
+void FrontierCluster::addFrontier(const FrontierPtr& frontier) 
 {
   frontier->cluster_ = this;
   frontier->searched_ = true;
   frontiers_.push_back(frontier);
 }
 
-void FrontierCluster::join(FrontierCluster* other) 
+void FrontierCluster::join(const FrontierClusterPtr& other) 
 {
+  ROS_INFO_STREAM("cluster:" << other);
+  ROS_INFO_STREAM("cluster:" << other->size());
+  ROS_INFO_STREAM("cluster:" << other->getFrontiers().size());
   auto other_frontiers = other->getFrontiers();
   frontiers_.insert(
     frontiers_.begin(), 

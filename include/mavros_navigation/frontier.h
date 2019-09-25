@@ -7,7 +7,8 @@ using namespace octomap;
 namespace mavros_navigation 
 {
 
-struct FrontierCluster;
+class FrontierCluster;
+using FrontierClusterPtr = FrontierCluster*;
 
 struct Frontier {
 	Frontier(
@@ -19,7 +20,8 @@ struct Frontier {
 	octomap::point3d coord_;
 	std::vector<OcTreeKey> neighbors_;
 	bool searched_ = {false};
-	FrontierCluster* cluster_;
+	FrontierClusterPtr cluster_ = {nullptr};
 };
+using FrontierPtr = Frontier*;
 
 }

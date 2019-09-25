@@ -17,6 +17,7 @@
 
 #include <boost/pointer_cast.hpp>
 #include <vector>
+#include <memory>
 #include <stdio.h>
 #include <fstream>
 #include <Eigen/Dense>
@@ -55,6 +56,9 @@ namespace mavros_navigation
 struct Frontier;
 class FrontierCluster;
 
+using FrontierPtr = Frontier*;
+using FrontierClusterPtr = FrontierCluster*;
+
 class FrontierBasedExploration3D : public octomap_server::OctomapServer
 {
 public:
@@ -62,7 +66,7 @@ public:
 	~FrontierBasedExploration3D();
 
 private:
-	typedef std::tr1::unordered_map<OcTreeKey, Frontier*, OcTreeKey::KeyHash> FrontierMap;
+	typedef std::tr1::unordered_map<OcTreeKey, FrontierPtr, OcTreeKey::KeyHash> FrontierMap;
 
 	// publisher functions
 	void publishOctree();
@@ -107,7 +111,7 @@ private:
 	void findVoids();
 	void findFrontierClusters();
 	void findVoidClusters();
-	void neighborRecursion(vector<OcTreeKey>& neighbors, FrontierCluster* cluster);
+	void neighborRecursion(vector<OcTreeKey>& neighbors, const FrontierClusterPtr& cluster);
 
 	// ros
 	ros::NodeHandle nh_; // ros node handle
@@ -149,7 +153,7 @@ private:
 	octomap::OcTree* oc_tree_; // main octree
 	FrontierMap frontiers_; // detected frontiers
 	FrontierMap prev_frontiers_; // detected frontiers in last cycle
-	vector<FrontierCluster*> f_clusters_; // detected fronter clusters
+	vector<FrontierClusterPtr> f_clusters_; // detected fronter clusters
 	vector<vector<octomap::point3d>> v_clusters_; // detected void clusters
 	vector<octomap::point3d> voids_; // detected voids
 	Eigen::Array<int, Eigen::Dynamic, 3> neighbor_table_; // lookup table for searching close neighbors
