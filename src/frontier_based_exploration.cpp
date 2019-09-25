@@ -75,7 +75,7 @@ void FrontierBasedExploration3D::insertScan(const tf::Point & sensorOrigin, cons
 }
 
 visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
-  const NodeNeighborMap& cells,
+  const FrontierMap& cells,
   visualization_msgs::Marker& marker,
   const std_msgs::ColorRGBA& color) 
 {
@@ -288,7 +288,6 @@ void FrontierBasedExploration3D::update() {
 void FrontierBasedExploration3D::findFrontiers() {
   ros::WallTime start_time = ros::WallTime::now();
   frontiers_.clear();
-  frontiers_search_.clear();
   
   //std::vector<Point_3> input_points;
   auto sensor_origin = sensor_tf_.getOrigin();
@@ -338,8 +337,8 @@ void FrontierBasedExploration3D::findFrontiers() {
         }
       }
       if (is_frontier) {
-        frontiers_[key] = neighbor_keys;
-        frontiers_search_[key] = false;
+        frontiers_[key].neighbors = neighbor_keys;
+        frontiers_[key].searched = false;
       }
     }
   }
@@ -372,11 +371,11 @@ void FrontierBasedExploration3D::findFrontierClusters()
 {
   ros::WallTime start_time = ros::WallTime::now();
   for (auto& f : frontiers_) {
-    if (!frontiers_search_[f.first]) {
+    if (!frontiers_[f.first].searched) {
       f_clusters_.push_back(FrontierCluster());
       auto nn = f.second;
-      frontiers_search_[f.first] = true;
-      neighborRecursion(nn); // one f_cluster is finished
+      frontiers_[f.first].searched = true;
+      neighborRecursion(nn.neighbors); // one f_cluster is finished
       if (f_clusters_.back().frontiers_.size() < min_f_cluster_size_) {
         f_clusters_.pop_back();
         continue;
@@ -387,6 +386,20 @@ void FrontierBasedExploration3D::findFrontierClusters()
 
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_DEBUG_STREAM("findFrontierClusters() used total " << total_time << " sec");
+}
+
+void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors) {
+  for (auto& n : neighbors) { // all neighbors of f
+    if (frontiers_.find(n) != frontiers_.end() && // if neighbor is also a frontier
+        !frontiers_[n].searched) // not already searched
+    { 
+      auto coord = utils::toEigen(oc_tree_->keyToCoord(n));
+      f_clusters_.back().frontiers_.push_back(coord);
+      auto nn = frontiers_[n]; // get second neighbors
+      frontiers_[n].searched = true;
+      neighborRecursion(nn.neighbors); // do it again
+    }
+  }
 }
 
 void FrontierBasedExploration3D::refreshFrontiers()
@@ -450,20 +463,6 @@ void FrontierBasedExploration3D::findVoidClusters()
   }
   double total_time = (ros::WallTime::now() - start_time).toSec();
   ROS_DEBUG_STREAM("findVoidClusters() used total " << total_time << " sec");
-}
-
-void FrontierBasedExploration3D::neighborRecursion(vector<OcTreeKey>& neighbors) {
-  for (auto& n : neighbors) { // all neighbors of f
-    if (frontiers_.find(n) != frontiers_.end() && // if neighbor is also a frontier
-        !frontiers_search_[n]) // not already searched
-    { 
-      auto coord = utils::toEigen(oc_tree_->keyToCoord(n));
-      f_clusters_.back().frontiers_.push_back(coord);
-      auto nn = frontiers_[n]; // get second neighbors
-      frontiers_search_[n] = true;
-      neighborRecursion(nn); // do it again
-    }
-  }
 }
 
 }

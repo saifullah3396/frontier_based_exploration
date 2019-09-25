@@ -53,6 +53,12 @@ using octomap_msgs::Octomap;
 namespace mavros_navigation
 {
 
+struct Frontier {
+	vector<OcTreeKey> neighbors;
+	bool searched = {false};
+	bool clustered = {false};
+};
+
 struct FrontierCluster {
   FrontierCluster() {}
 
@@ -87,13 +93,12 @@ public:
 	~FrontierBasedExploration3D();
 
 private:
-	typedef std::tr1::unordered_map<OcTreeKey, bool, OcTreeKey::KeyHash> NodeSearchMap;
-	typedef std::tr1::unordered_map<OcTreeKey, vector<OcTreeKey>, OcTreeKey::KeyHash> NodeNeighborMap;
+	typedef std::tr1::unordered_map<OcTreeKey, Frontier, OcTreeKey::KeyHash> FrontierMap;
 
 	// publisher functions
 	void publishOctree();
 	visualization_msgs::MarkerArray toMarkers(
-	  const NodeNeighborMap& cells,
+	  const FrontierMap& cells,
 	  visualization_msgs::Marker& marker,
 	  const std_msgs::ColorRGBA& color);
 	template <typename Point>
@@ -173,8 +178,7 @@ private:
 
 	// fbe3d
 	octomap::OcTree* oc_tree_; // main octree
-	NodeNeighborMap frontiers_; // detected frontiers
-	NodeSearchMap frontiers_search_; // boolean map used for setting frontier as searched/unsearched during clustering
+	FrontierMap frontiers_; // detected frontiers
 	vector<FrontierCluster> f_clusters_; // detected fronter clusters
 	vector<vector<octomap::point3d>> v_clusters_; // detected void clusters
 	vector<octomap::point3d> voids_; // detected voids
