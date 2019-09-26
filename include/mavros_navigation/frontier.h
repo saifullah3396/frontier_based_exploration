@@ -1,3 +1,4 @@
+#include <boost/weak_ptr.hpp>
 #include <vector>
 #include <Eigen/Dense>
 #include <mavros_navigation/utils.h>
@@ -8,7 +9,6 @@ namespace mavros_navigation
 {
 
 class FrontierCluster;
-using FrontierClusterPtr = FrontierCluster*;
 
 struct Frontier {
 	Frontier(
@@ -22,8 +22,7 @@ struct Frontier {
 	octomap::point3d coord_;
 	std::vector<OcTreeKey> neighbors_;
 	bool searched_ = {false};
-	FrontierClusterPtr cluster_ = {nullptr};
+	boost::weak_ptr<FrontierCluster> cluster_;
 };
-using FrontierPtr = Frontier*;
 
 }

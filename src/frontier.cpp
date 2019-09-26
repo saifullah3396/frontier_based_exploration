@@ -13,6 +13,7 @@ Frontier::Frontier(
   neighbors_(neighbors),
   searched_(searched)
 {
+  cluster_.reset();
 }
 
 }
