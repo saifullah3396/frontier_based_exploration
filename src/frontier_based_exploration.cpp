@@ -67,7 +67,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   arrow_marker_.scale.z = 0.05;
 
   frontiers_.reset();
-  frontiers_history_.reset();
+  frontiers_history_ = boost::make_shared<FrontierMap>();
 }
 
 FrontierBasedExploration3D::~FrontierBasedExploration3D() 
@@ -196,7 +196,7 @@ template <typename VisType>
 void FrontierBasedExploration3D::publishVisCells(
   const std::string& name, 
   const VisType& vis_type,
-  const Eigen::Vector3f& color) 
+  const Eigen::Vector3f& color)
 {
   if (vis_pubs_[name]) {
     std_msgs::ColorRGBA c;
@@ -250,7 +250,6 @@ void FrontierBasedExploration3D::publishVisPoints(
 }
 
 void FrontierBasedExploration3D::update() {
-  ROS_INFO_STREAM("update()");
   if (base_frame_id_ == "") {
     ROS_ERROR("base_frame_id_ not set! See if sensor information callback is fine.");
     return;
@@ -265,18 +264,19 @@ void FrontierBasedExploration3D::update() {
   }
 
   // update exploration
-  ROS_INFO_STREAM("refreshFrontiers()");
   refreshFrontiers();
-  ROS_INFO_STREAM("findFrontiers()");
   findFrontiers();
   //findVoids();
-  ROS_INFO_STREAM("Finding frontier clusters...");
   findFrontierClusters();
+  ROS_DEBUG_STREAM("Frontiers found:" << frontiers_->size());
+  ROS_DEBUG_STREAM("Total frontiers in history:" << frontiers_history_->size());
+  ROS_DEBUG_STREAM("Total frontier clusters:" << f_clusters_.size());
   //findVoidClusters();
 
   // publish visuals 
-  /*if (debug_) {
-    publishVisCells("vis_frontiers", frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
+  if (debug_) {
+    publishVisCells("vis_frontiers", *frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
+    publishVisCells("vis_frontiers", *frontiers_history_, Eigen::Vector3f(0.5, 0.0, 0.0));
     //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));
     vector<octomap::point3d> f_cluster_centers;
     vector<Eigen::Vector3d> f_cluster_normals;
@@ -292,12 +292,13 @@ void FrontierBasedExploration3D::update() {
     publishVisCells("vis_f_clusters", f_cluster_centers, Eigen::Vector3f(0.0, 0.0, 1.0));
     //publishVisPoints("vis_hull", hull_points_, Eigen::Vector3f(0.0, 0.0, 0.0));
     //publishVisPoints("vis_rand_sample", hull_sampled_points_, Eigen::Vector3f(0.5, 1.0, 0.5));
-  }*/
+  }
 }
 
 void FrontierBasedExploration3D::findFrontiers() {
   ros::WallTime start_time = ros::WallTime::now();
-  frontiers_history_->insert(frontiers_->begin(), frontiers_->end());
+  if (frontiers_)
+    frontiers_history_->insert(frontiers_->begin(), frontiers_->end());
   frontiers_ = boost::make_shared<FrontierMap>();
   //std::vector<Point_3> input_points;
   auto sensor_origin = sensor_tf_.getOrigin();
@@ -354,7 +355,7 @@ void FrontierBasedExploration3D::findFrontiers() {
   oc_tree_->resetChangeDetection();
   //hull_points_.insert(hull_points_.begin(), input_points.begin(), input_points.end());
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  //ROS_INFO_STREAM("findFrontiers() used total " << total_time << " sec");
+  ROS_DEBUG_STREAM("findFrontiers() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::findVoids() {
@@ -373,7 +374,7 @@ void FrontierBasedExploration3D::findVoids() {
       voids_.push_back(coord);
   }
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  //ROS_INFO_STREAM("findVoids() used total " << total_time << " sec");
+  //ROS_DEBUG_STREAM("findVoids() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::findFrontierClusters()
@@ -395,7 +396,7 @@ void FrontierBasedExploration3D::findFrontierClusters()
   }
 
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  //ROS_INFO_STREAM("findFrontierClusters() used total " << total_time << " sec");
+  ROS_DEBUG_STREAM("findFrontierClusters() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::neighborRecursion(
@@ -410,11 +411,13 @@ void FrontierBasedExploration3D::neighborRecursion(
       cluster->addFrontier(frontier);
       neighborRecursion(frontier->neighbors_, cluster); // repeat
     } else if (frontiers_history_ != nullptr) {
-      if (frontiers_history_->count(n) &&  // if neighbor was a frontier in last run
-          !(*frontiers_history_)[n]->cluster_.expired()) // cluster still exists
-      {
-        auto prev_cluster = (*frontiers_history_)[n]->cluster_.lock();
-        cluster->join(prev_cluster);
+      if (frontiers_history_->count(n)) { // if neighbor was a frontier in last run
+        auto frontier = (*frontiers_history_)[n];
+        if (!frontier->cluster_.expired() && frontier->cluster_.lock() != cluster) { // cluster still exists
+          auto prev_cluster = frontier->cluster_.lock();
+          cluster->join(prev_cluster);
+          f_clusters_.erase(std::remove(f_clusters_.begin(), f_clusters_.end(), prev_cluster), f_clusters_.end());
+        }
       }
     }
   }
@@ -422,6 +425,7 @@ void FrontierBasedExploration3D::neighborRecursion(
 
 void FrontierBasedExploration3D::refreshFrontiers()
 {
+  auto start_time = ros::Time::now();
   // Mark clusters as searched if they are in robot field of view and sensor range
   // and have neighbors updated
   double s_roll, s_pitch, s_yaw;
@@ -473,6 +477,8 @@ void FrontierBasedExploration3D::refreshFrontiers()
       iter++;
     }
   }
+  double total_time = (ros::Time::now() - start_time).toSec();
+  ROS_DEBUG_STREAM("refreshFrontiers() used total " << total_time << " sec");
 }
 
 void FrontierBasedExploration3D::findVoidClusters()
@@ -489,7 +495,7 @@ void FrontierBasedExploration3D::findVoidClusters()
     std::cout << "\t(" << mean[0] << "," << mean[1] << ")" << std::endl;
   }
   double total_time = (ros::WallTime::now() - start_time).toSec();
-  ROS_INFO_STREAM("findVoidClusters() used total " << total_time << " sec");
+  ROS_DEBUG_STREAM("findVoidClusters() used total " << total_time << " sec");
 }
 
 }
