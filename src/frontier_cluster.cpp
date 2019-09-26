@@ -12,12 +12,15 @@ void FrontierCluster::addFrontier(const boost::shared_ptr<Frontier>& frontier)
 
 void FrontierCluster::join(const boost::shared_ptr<FrontierCluster>& other) 
 {
-  ROS_INFO_STREAM("Joining cluster: " << other << "of size: " << other->size());
+  //ROS_INFO_STREAM("Joining cluster: " << other << " of size: " << other->size());
   auto other_frontiers = other->getFrontiers();
   frontiers_.insert(
     frontiers_.begin(), 
     other_frontiers.begin(), 
     other_frontiers.end());
+  for (const auto& f: other_frontiers) {
+    f->cluster_ = shared_from_this();
+  }
 }
 
 void FrontierCluster::setup() 
