@@ -1,3 +1,6 @@
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 #include <vector>
 #include <Eigen/Dense>
 #include <mavros_navigation/utils.h>
@@ -10,10 +13,7 @@ namespace mavros_navigation
 class Frontier;
 class FrontierCluster;
 
-using FrontierPtr = Frontier*;
-using FrontierClusterPtr = FrontierCluster*;
-
-class FrontierCluster {
+class FrontierCluster : public boost::enable_shared_from_this<FrontierCluster>{
 public:
   // Constructor
   FrontierCluster() {}
@@ -21,20 +21,22 @@ public:
 
   // Getters
   size_t size() const { return frontiers_.size(); }
-  std::vector<FrontierPtr> getFrontiers() const { return frontiers_; }
-  FrontierPtr getCenter() const { return center_f; }
+  std::vector<boost::weak_ptr<Frontier>> getFrontiers() const { return frontiers_; }
+  boost::weak_ptr<Frontier> getCenter() const { return center_f; }
 	bool getSearched() const {	return searched_; }
 
   // Setters
 	void setSearched(const bool& searched) { searched_ = searched; }
   
-	void addFrontier(const FrontierPtr& frontier); // Adds a frontier to cluster
-	void join(const FrontierClusterPtr& other); // unionize two clusters
+	void addFrontier(const boost::weak_ptr<Frontier>& frontier); // Adds a frontier to cluster
+	void join(const boost::shared_ptr<FrontierCluster>& other); // unionize two clusters
 	void setup(); // setup center and cluster normal
 
 private:
-  std::vector<FrontierPtr> frontiers_; // All the octocells in the cluster
-  FrontierPtr center_f; // Cluster center
+  boost::shared_ptr<FrontierCluster> get() 
+    { return boost::shared_ptr<FrontierCluster>(this); }
+  std::vector<boost::weak_ptr<Frontier>> frontiers_; // All the octocells in the cluster
+  boost::weak_ptr<Frontier> center_f; // Cluster center
 	Eigen::Vector3d normal_;
 	bool searched_ = {false}; // Whether this cluster has been navigated to or not
 };
