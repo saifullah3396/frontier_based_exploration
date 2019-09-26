@@ -12,11 +12,13 @@ using FrontierClusterPtr = FrontierCluster*;
 
 struct Frontier {
 	Frontier(
+		const octomap::OcTreeKey& key,
 		const octomap::point3d& coord,
 		const std::vector<OcTreeKey>& neighbors, 
 		const bool& searched);
 	~Frontier() {}
 
+	octomap::OcTreeKey key_;
 	octomap::point3d coord_;
 	std::vector<OcTreeKey> neighbors_;
 	bool searched_ = {false};
