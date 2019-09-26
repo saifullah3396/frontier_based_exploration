@@ -40,7 +40,7 @@
     <param name="vis_v_clusters" value="false" />
     <param name="vis_hull" value="false" />
     <param name="vis_rand_sample" value="false" />
-    <param name="vis_alpha" value="0.25" />
+    <param name="vis_alpha" value="0.75" />
     <param name="vis_duration" value="0.5" />
   </node>
 </launch>
