@@ -15,6 +15,7 @@
 #include <tf/message_filter.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include <boost/shared_ptr.hpp>
 #include <boost/pointer_cast.hpp>
 #include <vector>
 #include <memory>
@@ -56,8 +57,8 @@ namespace mavros_navigation
 struct Frontier;
 class FrontierCluster;
 
-using FrontierPtr = Frontier*;
-using FrontierClusterPtr = FrontierCluster*;
+using FrontierSharedPtr = boost::shared_ptr<Frontier>;
+using FrontierClusterSharedPtr = boost::shared_ptr<FrontierCluster>;
 
 class FrontierBasedExploration3D : public octomap_server::OctomapServer
 {
@@ -66,7 +67,7 @@ public:
 	~FrontierBasedExploration3D();
 
 private:
-	typedef std::tr1::unordered_map<OcTreeKey, FrontierPtr, OcTreeKey::KeyHash> FrontierMap;
+	typedef std::tr1::unordered_map<OcTreeKey, FrontierSharedPtr, OcTreeKey::KeyHash> FrontierMap;
 
 	// publisher functions
 	void publishOctree();
@@ -111,7 +112,7 @@ private:
 	void findVoids();
 	void findFrontierClusters();
 	void findVoidClusters();
-	void neighborRecursion(vector<OcTreeKey>& neighbors, const FrontierClusterPtr& cluster);
+	void neighborRecursion(vector<OcTreeKey>& neighbors, const FrontierClusterSharedPtr& cluster);
 
 	// ros
 	ros::NodeHandle nh_; // ros node handle
@@ -151,9 +152,9 @@ private:
 
 	// fbe3d
 	octomap::OcTree* oc_tree_; // main octree
-	FrontierMap frontiers_; // detected frontiers
-	FrontierMap prev_frontiers_; // detected frontiers in last cycle
-	vector<FrontierClusterPtr> f_clusters_; // detected fronter clusters
+	boost::shared_ptr<FrontierMap> frontiers_; // detected frontiers
+	boost::shared_ptr<FrontierMap> frontiers_history_; // all detected frontiers up to this point except if explored
+	vector<FrontierClusterSharedPtr> f_clusters_; // detected fronter clusters
 	vector<vector<octomap::point3d>> v_clusters_; // detected void clusters
 	vector<octomap::point3d> voids_; // detected voids
 	Eigen::Array<int, Eigen::Dynamic, 3> neighbor_table_; // lookup table for searching close neighbors
