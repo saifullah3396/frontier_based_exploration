@@ -86,11 +86,10 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
 {
   marker.color = color;
   marker.color.a = vis_alpha_;
-  int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
     marker.header.stamp = ros::Time();
-    marker.id = id++;  
+    marker.id = marker_id_++;  
     auto coord = oc_tree_->keyToCoord(c.first);
     marker.pose.position.x = coord.x();
     marker.pose.position.y = coord.y();
@@ -108,11 +107,10 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
 {
   marker.color = color;
   marker.color.a = vis_alpha_;
-  int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
     marker.header.stamp = ros::Time();
-    marker.id = id++;
+    marker.id = marker_id_++;
     marker.pose.position.x = c.x();
     marker.pose.position.y = c.y();
     marker.pose.position.z = c.z();
@@ -129,11 +127,10 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
 {
   marker.color = color;
   marker.color.a = vis_alpha_;
-  int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
     marker.header.stamp = ros::Time();
-    marker.id = id++;
+    marker.id = marker_id_++;
     marker.pose.position.x = c[0];
     marker.pose.position.y = c[1];
     marker.pose.position.z = c[2];
@@ -150,11 +147,10 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toMarkers(
 {
   marker.color = color;
   marker.color.a = vis_alpha_;
-  int id = 0;
   visualization_msgs::MarkerArray markers;
   for (const auto& c: cells) {
     marker.header.stamp = ros::Time();
-    marker.id = id++;
+    marker.id = marker_id_++;
     auto coord = oc_tree_->keyToCoord(c);
     marker.pose.position.x = coord.x();
     marker.pose.position.y = coord.y();
@@ -172,12 +168,11 @@ visualization_msgs::MarkerArray FrontierBasedExploration3D::toArrowMarkers(
 {
   marker.color = color;
   marker.color.a = vis_alpha_;
-  int id = 0;
   visualization_msgs::MarkerArray markers;
   for (int i = 0; i < cells.size(); ++i) {
     marker.points.clear();
     marker.header.stamp = ros::Time();
-    marker.id = id++;
+    marker.id = marker_id_++;
     geometry_msgs::Point start, end;
     start.x = cells[i][0];
     start.y = cells[i][1];
@@ -224,9 +219,6 @@ void FrontierBasedExploration3D::publishVisCellsWithDirections(
     c.a = vis_alpha_;
     auto cell_markers = toMarkers(vis_type, cell_marker_, c);
     auto arrow_markers = toArrowMarkers(vis_type, vis_dir_type, arrow_marker_, c);
-    for (auto& am : arrow_markers.markers) {
-      am.id += cell_markers.markers.size();
-    }
     vis_pubs_[name].publish(cell_markers);
     vis_pubs_[name].publish(arrow_markers);
   }
@@ -275,6 +267,7 @@ void FrontierBasedExploration3D::update() {
 
   // publish visuals 
   if (debug_) {
+    marker_id_ = 0;
     publishVisCells("vis_frontiers", *frontiers_, Eigen::Vector3f(1.0, 0.0, 0.0));
     publishVisCells("vis_frontiers", *frontiers_history_, Eigen::Vector3f(0.5, 0.0, 0.0));
     //publishVisCells("vis_voids", voids_, Eigen::Vector3f(1.0, 0.0, 1.0));

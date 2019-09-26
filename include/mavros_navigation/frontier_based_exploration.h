@@ -132,6 +132,7 @@ private:
 	visualization_msgs::Marker cell_marker_; // base marker for cells
 	visualization_msgs::Marker point_marker_; // base marker for points
 	visualization_msgs::Marker arrow_marker_; // base marker for arrows
+	int marker_id_; // global id for making each marker unique 
 	ros::Subscriber octomap_sub_; // octomap subscriber
 	ros::Subscriber planning_scene_sub_; // moveit planning scene subscriber
 	// ros params
