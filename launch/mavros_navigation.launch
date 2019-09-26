@@ -1,9 +1,13 @@
 <launch>
+  <arg name="debug" default="true" />
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+  <arg     if="$(arg debug)" name="launch_prefix"
+	   value="/usr/local/bin/gdb --directory=/usr/local/bin --ex run --args" />
   <arg name="planning_scene_topic" default="/move_group/monitored_planning_scene" />
   <arg name="point_cloud_topic" default="/camera/depth/points"/>
 
   <!-- Start the mavros navigation node -->
-  <node name="mavros_navigation_node" pkg="mavros_navigation" type="mavros_navigation_node" output="screen">
+  <node name="mavros_navigation_node" pkg="mavros_navigation" type="mavros_navigation_node" output="screen" launch-prefix="$(arg launch_prefix)">
     <!-- octomap server -->
   	<param name="frame_id" value="map" />
     <param name="sensor_model/max_range" value="5.0" />
