@@ -4,9 +4,9 @@
 namespace mavros_navigation 
 {
 
-void FrontierCluster::addFrontier(const boost::weak_ptr<Frontier>& frontier) 
+void FrontierCluster::addFrontier(const boost::shared_ptr<Frontier>& frontier) 
 {
-  frontier.lock()->searched_ = true;
+  frontier->searched_ = true;
   frontiers_.push_back(frontier);
 }
 
@@ -24,9 +24,8 @@ void FrontierCluster::setup()
 {
   std::vector<Eigen::Vector3d> coords;
   for (const auto& f: frontiers_) {
-    auto f_shared = f.lock();
-    f_shared->cluster_ = shared_from_this();
-    coords.push_back(utils::toEigen(f_shared->coord_));
+    f->cluster_ = shared_from_this();
+    coords.push_back(utils::toEigen(f->coord_));
   }
   Eigen::Vector3d fit_line;
   Eigen::Vector3d center;
