@@ -112,6 +112,7 @@ private:
 	void findVoids();
 	void findFrontierClusters();
 	void findVoidClusters();
+	void findGoalFrontier();
 	void neighborRecursion(vector<OcTreeKey>& neighbors, const FrontierClusterSharedPtr& cluster);
 
 	// ros

@@ -250,7 +250,7 @@ void FrontierBasedExploration3D::update() {
   }
 
   try {
-    // sensor frame to map frame
+    // map frame to sensor frame
     tf_listener.lookupTransform(frame_id_, base_frame_id_, ros::Time(0), sensor_tf_);
   } catch (tf::TransformException ex) {
     ROS_ERROR("%s",ex.what());
@@ -263,6 +263,7 @@ void FrontierBasedExploration3D::update() {
   findFrontiers();
   //findVoids();
   findFrontierClusters();
+  findGoalFrontier();
   double total_time = (ros::Time::now() - start_time).toSec();
   ROS_INFO_STREAM("fbe3d used total " << total_time << " sec");
 
@@ -501,6 +502,44 @@ void FrontierBasedExploration3D::findVoidClusters()
   }
   //double total_time = (ros::WallTime::now() - start_time).toSec();
   //ROS_DEBUG_STREAM("findVoidClusters() used total " << total_time << " sec");
+}
+
+void FrontierBasedExploration3D::findGoalFrontier()
+{
+  // find all frontier cluster centers within robot view and closest of them
+  double min_dist = 1000;
+  FrontierClusterSharedPtr closest_c;
+  closest_c.reset();
+  double s_roll, s_pitch, s_yaw;
+  tf::Matrix3x3(sensor_tf_.getRotation()).getRPY(s_roll, s_pitch, s_yaw);
+  for (auto& c : f_clusters_) { // clusters may have changed from refresh time so find center distances again
+    auto center = c->getCenter();
+    // Frontier center in map frame
+    auto c_in_map = tf::Vector3(center->coord_.x(), center->coord_.y(), center->coord_.z());
+    // Frontier center in sensor frame
+    auto c_in_sensor = sensor_tf_.inverse() * c_in_map;
+    if (fabsf(atan2(c_in_sensor.y(), c_in_sensor.x())) <= sensor_horizontal_fov_) {
+      // Frontier center is within field of view
+      auto dist = sqrt(
+        c_in_sensor.x() * c_in_sensor.x() + 
+        c_in_sensor.y() * c_in_sensor.y() +
+        c_in_sensor.z() * c_in_sensor.z());
+      if (dist <= min_dist) {
+        min_dist = dist;
+        closest_c = c;
+      }
+    }
+  }
+  // publish closest frontier to robot in the vicinity as the goal frontier
+  if (closest_c) {
+    geometry_msgs::PointStamped goal;
+    goal.header.frame_id = "map";
+    goal.header.stamp = ros::Time::now();
+    goal.point.x = closest_c->getCenter()->coord_.x();
+    goal.point.y = closest_c->getCenter()->coord_.y();
+    goal.point.z = closest_c->getCenter()->coord_.z();
+    goal_frontier_pub_.publish(goal);
+  }
 }
 
 }
