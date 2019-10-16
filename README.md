@@ -1,4 +1,4 @@
-# MAVROS NAVIGATION
+# Frontier based Exploration in 3D for UAVs
 
 A frontier based exploration algorithm for navigating through unknown environments and generating a map based on octomaps.
 
