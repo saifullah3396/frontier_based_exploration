@@ -36,8 +36,8 @@
 #include <CGAL/algorithm.h>
 #include <CGAL/Side_of_triangle_mesh.h>
 
-#include <mavros_navigation/utils.h>
-#include <mavros_navigation/dkm/dkm.hpp>
+#include <frontier_based_exploration/utils.h>
+#include <frontier_based_exploration/dkm/dkm.hpp>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel     K;
 typedef K::Point_3                                              Point_3;
@@ -51,7 +51,7 @@ using namespace std;
 using namespace octomap;
 using octomap_msgs::Octomap;
 
-namespace mavros_navigation
+namespace frontier_based_exploration
 {
 
 struct Frontier;

@@ -1,8 +1,8 @@
-#include <mavros_navigation/frontier_based_exploration.h>
-#include <mavros_navigation/frontier_cluster.h>
-#include <mavros_navigation/frontier.h>
+#include <frontier_based_exploration/frontier_based_exploration.h>
+#include <frontier_based_exploration/frontier_cluster.h>
+#include <frontier_based_exploration/frontier.h>
 
-namespace mavros_navigation
+namespace frontier_based_exploration
 {
 
 FrontierBasedExploration3D::FrontierBasedExploration3D() 

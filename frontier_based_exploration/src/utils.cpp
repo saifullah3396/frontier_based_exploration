@@ -1,7 +1,7 @@
 
-#include "mavros_navigation/utils.h"
+#include "frontier_based_exploration/utils.h"
 
-namespace mavros_navigation 
+namespace frontier_based_exploration 
 {
 namespace utils 
 {

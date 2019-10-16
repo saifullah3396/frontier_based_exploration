@@ -9,7 +9,7 @@
 
 #include <Eigen/Dense>
 
-namespace mavros_navigation 
+namespace frontier_based_exploration 
 {
 namespace utils 
 {

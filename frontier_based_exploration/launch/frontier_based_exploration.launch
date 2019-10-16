@@ -7,7 +7,7 @@
   <arg name="point_cloud_topic" default="/camera/depth/points"/>
 
   <!-- Start the mavros navigation node -->
-  <node name="mavros_navigation_node" pkg="mavros_navigation" type="mavros_navigation_node" output="screen" launch-prefix="$(arg launch_prefix)">
+  <node name="frontier_based_exploration_node" pkg="frontier_based_exploration" type="frontier_based_exploration_node" output="screen" launch-prefix="$(arg launch_prefix)">
     <!-- octomap server -->
   	<param name="frame_id" value="map" />
     <param name="sensor_model/max_range" value="5.0" />

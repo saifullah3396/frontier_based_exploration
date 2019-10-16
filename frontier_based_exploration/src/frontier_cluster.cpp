@@ -1,7 +1,7 @@
-#include <mavros_navigation/frontier_cluster.h>
-#include <mavros_navigation/frontier.h>
+#include <frontier_based_exploration/frontier_cluster.h>
+#include <frontier_based_exploration/frontier.h>
 
-namespace mavros_navigation 
+namespace frontier_based_exploration 
 {
 
 void FrontierCluster::addFrontier(const boost::shared_ptr<Frontier>& frontier) 

@@ -1,6 +1,6 @@
-#include <mavros_navigation/frontier.h>
+#include <frontier_based_exploration/frontier.h>
 
-namespace mavros_navigation 
+namespace frontier_based_exploration 
 {
 
 Frontier::Frontier(

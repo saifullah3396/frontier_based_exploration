@@ -3,11 +3,11 @@
 #include <boost/weak_ptr.hpp>
 #include <vector>
 #include <Eigen/Dense>
-#include <mavros_navigation/utils.h>
+#include <frontier_based_exploration/utils.h>
 
 using namespace octomap;
 
-namespace mavros_navigation 
+namespace frontier_based_exploration 
 {
 
 class Frontier;
