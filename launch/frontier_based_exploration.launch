@@ -4,18 +4,21 @@
   <arg     if="$(arg debug)" name="launch_prefix"
 	   value="/usr/local/bin/gdb --directory=/usr/local/bin --ex run --args" />
   <arg name="planning_scene_topic" default="/move_group/monitored_planning_scene" />
+  <arg name="frame_id"  default="map"/>
+  <arg name="base_frame_id" default="base_link" />
+  <arg name="octomap_resolution"  default="0.15"/>
   <arg name="point_cloud_topic" default="/camera/depth/points"/>
 
   <!-- Start the navigation node -->
   <node name="frontier_based_exploration_node" pkg="frontier_based_exploration" type="frontier_based_exploration_node" output="screen" launch-prefix="$(arg launch_prefix)">
     <!-- octomap server -->
-  	<param name="frame_id" value="map" />
+  	<param name="frame_id" value="$(arg frame_id)" />
     <param name="sensor_model/max_range" value="5.0" />
     <param name="sensor_model/min" value="0.01" />
     <param name="sensor_model/max" value="0.99" />
     <param name="sensor_model/hit" value="0.9" />
     <param name="sensor_model/miss" value="0.45" />
-    <param name="resolution" value="0.15" />
+    <param name="resolution" value="$(arg octomap_resolution)" />
     <param name="color/r" value="0.1" />
     <param name="color/g" value="0.1" />
     <param name="color/b" value="0.1" />
@@ -25,11 +28,11 @@
     <param name="publish_free_space" value="false" />
     <remap from="cloud_in" to="$(arg point_cloud_topic)" />
     <!-- frontier based exploration -->
-    <param name="base_frame_id" value="base_link" />
+    <param name="base_frame_id" value="$(arg base_frame_id)" />
     <param name="min_un_neighbor_count" value="3" />
     <param name="min_f_cluster_size" value="5" />
     <param name="sensor_horizontal_fov" value="1.09" />
-    <param name="frontier_exp_range" value="5.0" />
+    <param name="frontier_exp_range" value="4.0" />
     <param name="planning_scene_topic" value="$(arg planning_scene_topic)" />
     <param name="frontier_search_min_z" value="-0.25" />
     <param name="frontier_search_max_z" value="2.25" />

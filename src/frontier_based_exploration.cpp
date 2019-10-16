@@ -258,14 +258,14 @@ void FrontierBasedExploration3D::update() {
   }
 
   // update exploration
-  auto start_time = ros::Time::now();
+  //auto start_time = ros::Time::now();
   refreshFrontiers();
   findFrontiers();
   //findVoids();
   findFrontierClusters();
   findGoalFrontier();
-  double total_time = (ros::Time::now() - start_time).toSec();
-  ROS_INFO_STREAM("fbe3d used total " << total_time << " sec");
+  //double total_time = (ros::Time::now() - start_time).toSec();
+  //ROS_INFO_STREAM("fbe3d used total " << total_time << " sec");
 
   //ROS_DEBUG_STREAM("Frontiers found:" << frontiers_->size());
   //ROS_DEBUG_STREAM("Total frontiers in history:" << frontiers_history_->size());
