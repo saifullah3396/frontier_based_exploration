@@ -6,7 +6,7 @@
   <arg name="planning_scene_topic" default="/move_group/monitored_planning_scene" />
   <arg name="point_cloud_topic" default="/camera/depth/points"/>
 
-  <!-- Start the mavros navigation node -->
+  <!-- Start the navigation node -->
   <node name="frontier_based_exploration_node" pkg="frontier_based_exploration" type="frontier_based_exploration_node" output="screen" launch-prefix="$(arg launch_prefix)">
     <!-- octomap server -->
   	<param name="frame_id" value="map" />
