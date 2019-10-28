@@ -35,7 +35,8 @@
     <param name="frontier_exp_range" value="4.0" />
     <param name="planning_scene_topic" value="$(arg planning_scene_topic)" />
     <param name="frontier_search_min_z" value="-0.25" />
-    <param name="frontier_search_max_z" value="2.25" />
+    <param name="frontier_search_max_z" value="2.0" />
+    <param name="frontier_search_max_z_diff" value="1.5" /> <!-- min/max 1.5 m from quadrotor height-->
     <param name="debug" value="true" />
     <param name="vis_frontiers" value="true" />
     <param name="vis_voids" value="false" />

@@ -18,6 +18,7 @@ FrontierBasedExploration3D::FrontierBasedExploration3D()
   p_nh.getParam("planning_scene_topic", planning_scene_topic);
   p_nh.getParam("frontier_search_min_z", frontier_search_min_z_);
   p_nh.getParam("frontier_search_max_z", frontier_search_max_z_);
+  p_nh.getParam("frontier_search_max_z_diff", frontier_search_max_z_diff_);
   p_nh.getParam("min_un_neighbor_count", min_un_neighbor_count_);
   p_nh.getParam("min_f_cluster_size", min_f_cluster_size_);
   p_nh.getParam("sensor_model/max_range", sensor_max_range_);
@@ -376,12 +377,17 @@ void FrontierBasedExploration3D::findFrontiers() {
       continue;
     auto occupied = oc_tree_->isNodeOccupied(node);
     if (!occupied) {
-      // check if node is at max range from sensor and only get those as frontiers
+      // check if node is at the max sensor range and 
+      // within min/max frontier_search_max_z_diff
       octomap::point3d diff;
       diff.x() = sensor_origin.x() - coord.x();
       diff.y() = sensor_origin.y() - coord.y();
       diff.z() = sensor_origin.z() - coord.z();
-      if (diff.norm() < sensor_max_range_)
+      if (
+        coord.z() < frontier_search_min_z_ || 
+        coord.z() > frontier_search_max_z_ || 
+        diff.norm() < sensor_max_range_ || 
+        fabsf(diff.z()) > frontier_search_max_z_diff_)
         continue;
 
       bool is_frontier = false;

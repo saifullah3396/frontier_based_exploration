@@ -144,6 +144,7 @@ private:
 	double octomap_resolution_; // octomap resolution
 	double frontier_search_min_z_; // minimum search height 
 	double frontier_search_max_z_; // maximum search height 
+	double frontier_search_max_z_diff_; // min/max frontier search difference from robot 
 	int min_un_neighbor_count_ = {1}; // minimum number of unknown neighbors for frontier
 	int min_f_cluster_size_; // minimum number of elements in cluster frontier
 	double sensor_max_range_; // maximum sensor range
